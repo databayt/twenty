@@ -10,7 +10,6 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 
@@ -25,6 +24,7 @@ const meterDrivers = parseArrayEnvVar(
 );
 
 if (process.env.EXCEPTION_HANDLER_DRIVER === ExceptionHandlerDriver.SENTRY) {
+  const { nodeProfilingIntegration } = require('@sentry/profiling-node');
   Sentry.init({
     environment: process.env.SENTRY_ENVIRONMENT,
     release: process.env.APP_VERSION,

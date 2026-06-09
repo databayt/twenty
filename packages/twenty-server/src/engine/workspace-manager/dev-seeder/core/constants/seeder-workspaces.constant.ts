@@ -24,12 +24,14 @@ export const SEED_APPLE_WORKSPACE_ID = (process.env.E2E_SEED_WORKSPACE_ID ??
   DEFAULT_SEED_APPLE_WORKSPACE_ID) as typeof DEFAULT_SEED_APPLE_WORKSPACE_ID;
 export const SEED_YCOMBINATOR_WORKSPACE_ID =
   '3b8e6458-5fc1-4e63-8563-008ccddaa6db';
+export const SEED_HOGWARTS_WORKSPACE_ID = '80df2525-e3f0-4020-85e9-95251ca5d902';
 export const SEED_EMPTY_WORKSPACE_3_ID = '506915ec-21ca-431b-a04a-257eb216865e';
 export const SEED_EMPTY_WORKSPACE_4_ID = 'aa8fdcb1-8ee1-4012-98af-44a97caa7411';
 
 export type SeededWorkspacesIds =
   | typeof SEED_APPLE_WORKSPACE_ID
-  | typeof SEED_YCOMBINATOR_WORKSPACE_ID;
+  | typeof SEED_YCOMBINATOR_WORKSPACE_ID
+  | typeof SEED_HOGWARTS_WORKSPACE_ID;
 
 export const SEEDER_CREATE_WORKSPACE_INPUT = {
   [SEED_APPLE_WORKSPACE_ID]: {
@@ -48,6 +50,15 @@ export const SEEDER_CREATE_WORKSPACE_INPUT = {
     inviteHash: 'yc.dev-invite-hash',
     logo: 'https://twentyhq.github.io/placeholder-images/workspaces/ycombinator-logo.png',
     activationStatus: WorkspaceActivationStatus.PENDING_CREATION, // will be set to active after default role creation
+    isTwoFactorAuthenticationEnforced: false,
+  },
+  [SEED_HOGWARTS_WORKSPACE_ID]: {
+    id: SEED_HOGWARTS_WORKSPACE_ID,
+    displayName: 'Hogwarts',
+    subdomain: 'hogwarts',
+    inviteHash: 'hogwarts.dev-invite-hash',
+    logo: '',
+    activationStatus: WorkspaceActivationStatus.PENDING_CREATION,
     isTwoFactorAuthenticationEnforced: false,
   },
 } as const satisfies Record<

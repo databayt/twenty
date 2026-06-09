@@ -76,3 +76,36 @@ export const COMPANY_CUSTOM_FIELD_SEEDS: FieldMetadataSeed[] = [
     defaultValue: false,
   },
 ];
+
+export const HOGWARTS_COMPANY_CUSTOM_FIELD_SEEDS: FieldMetadataSeed[] = [
+  {
+    type: FieldMetadataType.NUMBER,
+    name: 'studentCount',
+    label: 'Student Count',
+    description: 'Total number of students enrolled',
+    icon: 'IconUsers',
+    isActive: true,
+    isNullable: true,
+    isUnique: false,
+  },
+  {
+    type: FieldMetadataType.TEXT,
+    name: 'curriculum',
+    label: 'Curriculum',
+    description: 'Educational curriculum taught',
+    icon: 'IconBook',
+    isActive: true,
+    isNullable: true,
+    isUnique: false,
+  },
+  {
+    type: FieldMetadataType.TEXT,
+    name: 'pitchHook',
+    label: 'Pitch Hook',
+    description: 'Personalized pitch hook',
+    icon: 'IconSparkles',
+    isActive: true,
+    isNullable: true,
+    isUnique: false,
+  },
+];

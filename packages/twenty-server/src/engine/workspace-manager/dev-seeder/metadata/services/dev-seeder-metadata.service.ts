@@ -14,8 +14,12 @@ import { ObjectMetadataService } from 'src/engine/metadata-modules/object-metada
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
+  SEED_HOGWARTS_WORKSPACE_ID,
 } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
-import { COMPANY_CUSTOM_FIELD_SEEDS } from 'src/engine/workspace-manager/dev-seeder/metadata/custom-fields/constants/company-custom-field-seeds.constant';
+import {
+  COMPANY_CUSTOM_FIELD_SEEDS,
+  HOGWARTS_COMPANY_CUSTOM_FIELD_SEEDS,
+} from 'src/engine/workspace-manager/dev-seeder/metadata/custom-fields/constants/company-custom-field-seeds.constant';
 import { PERSON_CUSTOM_FIELD_SEEDS } from 'src/engine/workspace-manager/dev-seeder/metadata/custom-fields/constants/person-custom-field-seeds.constant';
 import { PET_CARE_AGREEMENT_CARETAKER_MORPH_SEED } from 'src/engine/workspace-manager/dev-seeder/metadata/custom-fields/constants/pet-care-agreement-custom-relation-field-seeds.constant';
 import { PET_CUSTOM_FIELD_SEEDS } from 'src/engine/workspace-manager/dev-seeder/metadata/custom-fields/constants/pet-custom-field-seeds.constant';
@@ -170,6 +174,12 @@ export class DevSeederMetadataService {
       fields: [
         { objectName: 'company', seeds: COMPANY_CUSTOM_FIELD_SEEDS },
         { objectName: 'person', seeds: PERSON_CUSTOM_FIELD_SEEDS },
+      ],
+    },
+    [SEED_HOGWARTS_WORKSPACE_ID]: {
+      objects: [],
+      fields: [
+        { objectName: 'company', seeds: HOGWARTS_COMPANY_CUSTOM_FIELD_SEEDS },
       ],
     },
   };

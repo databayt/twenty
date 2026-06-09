@@ -21,6 +21,7 @@ import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scope
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
+  SEED_HOGWARTS_WORKSPACE_ID,
 } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import {
   RANDOM_USER_WORKSPACE_IDS,
@@ -148,6 +149,12 @@ export class DevSeederPermissionsService {
         USER_WORKSPACE_DATA_SEED_IDS.JONY_ACME,
         USER_WORKSPACE_DATA_SEED_IDS.JANE_ACME,
         USER_WORKSPACE_DATA_SEED_IDS.PHIL_ACME,
+      ];
+    } else if (workspaceId === SEED_HOGWARTS_WORKSPACE_ID) {
+      adminUserWorkspaceId = USER_WORKSPACE_DATA_SEED_IDS.ALBUS_HOGWARTS;
+      memberUserWorkspaceIds = [
+        USER_WORKSPACE_DATA_SEED_IDS.ALI_E_HOGWARTS,
+        USER_WORKSPACE_DATA_SEED_IDS.ALI_EDU_HOGWARTS,
       ];
     }
 

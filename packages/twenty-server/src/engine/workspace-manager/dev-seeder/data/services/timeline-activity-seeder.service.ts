@@ -27,6 +27,7 @@ import {
 import { TASK_DATA_SEEDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/task-data-seeds.constant';
 import { TASK_TARGET_DATA_SEEDS_MAP } from 'src/engine/workspace-manager/dev-seeder/data/constants/task-target-data-seeds.constant';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
+import { SEED_HOGWARTS_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { type TimelineActivityWorkspaceEntity } from 'src/modules/timeline/standard-objects/timeline-activity.workspace-entity';
 import { buildTimelineActivityRelatedMorphFieldMetadataName } from 'src/modules/timeline/utils/timeline-activity-related-morph-field-metadata-name-builder.util';
 
@@ -128,6 +129,9 @@ export class TimelineActivitySeederService {
     schemaName: string;
     workspaceId: string;
   }) {
+    if (workspaceId === SEED_HOGWARTS_WORKSPACE_ID) {
+      return;
+    }
     // Get workspace-specific participant data
     const calendarEventParticipants =
       getCalendarEventParticipantDataSeeds(workspaceId);

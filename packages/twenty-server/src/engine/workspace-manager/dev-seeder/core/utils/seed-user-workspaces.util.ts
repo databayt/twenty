@@ -4,6 +4,7 @@ import { type UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
+  SEED_HOGWARTS_WORKSPACE_ID,
 } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { generateRandomUsers } from 'src/engine/workspace-manager/dev-seeder/core/utils/generate-random-users.util';
 import { USER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-users.util';
@@ -20,6 +21,9 @@ export const USER_WORKSPACE_DATA_SEED_IDS = {
   JONY_ACME: '20202020-e10a-4c27-a90b-b08c57b02d45',
   PHIL_ACME: '20202020-e10a-4c27-a90b-b08c57b02d46',
   SCOTT: '20202020-1111-4a01-8001-000000000002',
+  ALBUS_HOGWARTS: '059adf98-95f6-48ea-aaa7-9f39702d5b11',
+  ALI_E_HOGWARTS: '059adf98-95f6-48ea-aaa7-9f39702d5b20',
+  ALI_EDU_HOGWARTS: '059adf98-95f6-48ea-aaa7-9f39702d5b21',
 };
 
 const {
@@ -97,6 +101,26 @@ export const seedUserWorkspaces = async ({
       {
         id: USER_WORKSPACE_DATA_SEED_IDS.JANE_ACME,
         userId: USER_DATA_SEED_IDS.JANE,
+        workspaceId,
+      },
+    ];
+  }
+
+  if (workspaceId === SEED_HOGWARTS_WORKSPACE_ID) {
+    userWorkspaces = [
+      {
+        id: USER_WORKSPACE_DATA_SEED_IDS.ALBUS_HOGWARTS,
+        userId: USER_DATA_SEED_IDS.ALBUS,
+        workspaceId,
+      },
+      {
+        id: USER_WORKSPACE_DATA_SEED_IDS.ALI_E_HOGWARTS,
+        userId: USER_DATA_SEED_IDS.ALI_E,
+        workspaceId,
+      },
+      {
+        id: USER_WORKSPACE_DATA_SEED_IDS.ALI_EDU_HOGWARTS,
+        userId: USER_DATA_SEED_IDS.ALI_EDU,
         workspaceId,
       },
     ];

@@ -1,9 +1,44 @@
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
+  SEED_HOGWARTS_WORKSPACE_ID,
 } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { generateRandomUsers } from 'src/engine/workspace-manager/dev-seeder/core/utils/generate-random-users.util';
 import { USER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-users.util';
+
+export const WORKSPACE_MEMBER_ALBUS_ID = '701819b1-b9dd-4b6e-840b-e9b4ef8c0216';
+export const WORKSPACE_MEMBER_ALI_E_ID = '701819b1-b9dd-4b6e-840b-e9b4ef8c0226';
+export const WORKSPACE_MEMBER_ALI_EDU_ID = '701819b1-b9dd-4b6e-840b-e9b4ef8c0227';
+
+export const ALBUS_WORKSPACE_MEMBER_SEED: WorkspaceMemberDataSeed = {
+  id: WORKSPACE_MEMBER_ALBUS_ID,
+  nameFirstName: 'Abdou',
+  nameLastName: 'Hogwarts',
+  locale: 'en',
+  colorScheme: 'Light',
+  userEmail: 'abdout@hogwarts.edu',
+  userId: USER_DATA_SEED_IDS.ALBUS,
+};
+
+export const ALI_E_WORKSPACE_MEMBER_SEED: WorkspaceMemberDataSeed = {
+  id: WORKSPACE_MEMBER_ALI_E_ID,
+  nameFirstName: 'Ali',
+  nameLastName: 'Hogwarts',
+  locale: 'en',
+  colorScheme: 'Light',
+  userEmail: 'ali@hogwarts.e',
+  userId: USER_DATA_SEED_IDS.ALI_E,
+};
+
+export const ALI_EDU_WORKSPACE_MEMBER_SEED: WorkspaceMemberDataSeed = {
+  id: WORKSPACE_MEMBER_ALI_EDU_ID,
+  nameFirstName: 'Ali',
+  nameLastName: 'Hogwarts',
+  locale: 'en',
+  colorScheme: 'Light',
+  userEmail: 'ali@hogwarts.edu',
+  userId: USER_DATA_SEED_IDS.ALI_EDU,
+};
 
 type WorkspaceMemberDataSeed = {
   id: string;
@@ -116,6 +151,12 @@ export const getWorkspaceMemberDataSeeds = (
   } else if (workspaceId === SEED_YCOMBINATOR_WORKSPACE_ID) {
     // YC workspace gets all 4 original workspace members
     return originalWorkspaceMembers;
+  } else if (workspaceId === SEED_HOGWARTS_WORKSPACE_ID) {
+    return [
+      ALBUS_WORKSPACE_MEMBER_SEED,
+      ALI_E_WORKSPACE_MEMBER_SEED,
+      ALI_EDU_WORKSPACE_MEMBER_SEED,
+    ];
   }
 
   return originalWorkspaceMembers;

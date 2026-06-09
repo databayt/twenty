@@ -38,6 +38,11 @@ import {
   COMPANY_DATA_SEEDS,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/company-data-seeds.constant';
 import {
+  HOGWARTS_COMPANY_DATA_SEEDS,
+  HOGWARTS_COMPANY_DATA_SEED_COLUMNS,
+} from 'src/engine/workspace-manager/dev-seeder/data/constants/hogwarts-company-data-seeds.constant';
+import { SEED_HOGWARTS_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
+import {
   DASHBOARD_DATA_SEED_COLUMNS,
   getDashboardDataSeeds,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/dashboard-data-seeds.constant';
@@ -124,6 +129,30 @@ const getRecordSeedsBatches = (
   attachmentSeeds: RecordSeedConfig['recordSeeds'],
   _featureFlags?: Record<FeatureFlagKey, boolean>,
 ): RecordSeedConfig[][] => {
+  if (workspaceId === SEED_HOGWARTS_WORKSPACE_ID) {
+    return [
+      [
+        {
+          tableName: 'workspaceMember',
+          pgColumns: WORKSPACE_MEMBER_DATA_SEED_COLUMNS,
+          recordSeeds: getWorkspaceMemberDataSeeds(workspaceId),
+        },
+      ],
+      [
+        {
+          tableName: 'company',
+          pgColumns: HOGWARTS_COMPANY_DATA_SEED_COLUMNS,
+          recordSeeds: HOGWARTS_COMPANY_DATA_SEEDS,
+        },
+        {
+          tableName: 'dashboard',
+          pgColumns: DASHBOARD_DATA_SEED_COLUMNS,
+          recordSeeds: getDashboardDataSeeds(workspaceId),
+        },
+      ],
+    ];
+  }
+
   // Batch 1: No dependencies
   const batch1: RecordSeedConfig[] = [
     {

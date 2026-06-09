@@ -10,6 +10,9 @@ export const USER_DATA_SEED_IDS = {
   JONY: '20202020-3957-4908-9c36-2929a23f8357',
   PHIL: '20202020-7169-42cf-bc47-1cfef15264b8',
   SCOTT: '20202020-1111-4a01-8001-000000000001',
+  ALBUS: '701819b1-b9dd-4b6e-840b-e9b4ef8c0215',
+  ALI_E: '701819b1-b9dd-4b6e-840b-e9b4ef8c0220',
+  ALI_EDU: '701819b1-b9dd-4b6e-840b-e9b4ef8c0221',
 };
 
 const { users: randomUsers, userIds: randomUserIds } = generateRandomUsers();
@@ -76,6 +79,39 @@ export const seedUsers = async ({ queryRunner, schemaName }: SeedUsersArgs) => {
         '$2b$10$3LwXjJRtLsfx4hLuuXhxt.3mWgismTiZFCZSG3z9kDrSfsrBl0fT6', // tim@apple.dev
       canImpersonate: false,
       canAccessFullAdminPanel: false,
+      isEmailVerified: true,
+    },
+    {
+      id: USER_DATA_SEED_IDS.ALBUS,
+      firstName: 'Abdou',
+      lastName: 'Hogwarts',
+      email: 'abdout@hogwarts.edu',
+      passwordHash:
+        '$2b$10$oBuZ9vZ8rG6XD/KvQy7v3ekcry4UepOvBCsjbTAoLAM9NII7JkNou', // 1234
+      canImpersonate: true,
+      canAccessFullAdminPanel: true,
+      isEmailVerified: true,
+    },
+    {
+      id: USER_DATA_SEED_IDS.ALI_E,
+      firstName: 'Ali',
+      lastName: 'Hogwarts',
+      email: 'ali@hogwarts.e',
+      passwordHash:
+        '$2b$10$oBuZ9vZ8rG6XD/KvQy7v3ekcry4UepOvBCsjbTAoLAM9NII7JkNou', // 1234
+      canImpersonate: true,
+      canAccessFullAdminPanel: true,
+      isEmailVerified: true,
+    },
+    {
+      id: USER_DATA_SEED_IDS.ALI_EDU,
+      firstName: 'Ali',
+      lastName: 'Hogwarts',
+      email: 'ali@hogwarts.edu',
+      passwordHash:
+        '$2b$10$oBuZ9vZ8rG6XD/KvQy7v3ekcry4UepOvBCsjbTAoLAM9NII7JkNou', // 1234
+      canImpersonate: true,
+      canAccessFullAdminPanel: true,
       isEmailVerified: true,
     },
   ];

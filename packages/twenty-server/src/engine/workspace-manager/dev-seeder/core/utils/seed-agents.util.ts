@@ -4,6 +4,7 @@ import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-agent-execut
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
+  SEED_HOGWARTS_WORKSPACE_ID,
 } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { USER_WORKSPACE_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-user-workspaces.util';
 
@@ -390,7 +391,10 @@ export const seedAgents = async ({
   schemaName,
   workspaceId,
 }: SeedAgentsArgs) => {
-  if (workspaceId === SEED_APPLE_WORKSPACE_ID) {
+  if (
+    workspaceId === SEED_APPLE_WORKSPACE_ID ||
+    workspaceId === SEED_HOGWARTS_WORKSPACE_ID
+  ) {
     return;
   }
 

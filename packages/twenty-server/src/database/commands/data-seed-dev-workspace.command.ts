@@ -5,6 +5,7 @@ import { Command, CommandRunner, Option } from 'nest-commander';
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
+  SEED_HOGWARTS_WORKSPACE_ID,
   SeededWorkspacesIds,
 } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { DevSeederService } from 'src/engine/workspace-manager/dev-seeder/services/dev-seeder.service';
@@ -40,7 +41,11 @@ export class DataSeedWorkspaceCommand extends CommandRunner {
   ): Promise<void> {
     const workspaceIds: SeededWorkspacesIds[] = options.light
       ? [SEED_APPLE_WORKSPACE_ID]
-      : [SEED_APPLE_WORKSPACE_ID, SEED_YCOMBINATOR_WORKSPACE_ID];
+      : [
+          SEED_APPLE_WORKSPACE_ID,
+          SEED_YCOMBINATOR_WORKSPACE_ID,
+          SEED_HOGWARTS_WORKSPACE_ID,
+        ];
 
     try {
       for (const workspaceId of workspaceIds) {
