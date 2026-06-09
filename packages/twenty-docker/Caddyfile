@@ -1,0 +1,9 @@
+# Twenty CRM Frontend with Wildcard Support
+*.crm.databayt.org, crm.databayt.org {
+    reverse_proxy localhost:3001
+}
+
+# Twenty CRM Backend API
+api.crm.databayt.org {
+    reverse_proxy localhost:3000
+}
