@@ -1,0 +1,20 @@
+# Explicitly ignore node_modules and build artifacts
+**/node_modules
+packages/*/dist
+packages/*/build
+**/.swc
+**/.local-storage
+**/.nx
+**/.git
+**/.neon
+
+# Root directories to ignore
+node_modules
+.nx
+.git
+.vercel
+.neon
+.playwright-mcp
+.playwright-cli
+output/playwright
+screenshots
