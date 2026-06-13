@@ -104,7 +104,9 @@ exit   # log out and back in so the docker group applies
 The runtime image is pulled from Docker Hub, so you only need this folder:
 
 ```bash
-git clone --depth 1 https://github.com/abdout/twenty.git
+# The kit currently lives on the feat/hogwarts-workspace-setup branch.
+# (Merge it to main and drop the -b flag once you do.)
+git clone --depth 1 -b feat/hogwarts-workspace-setup https://github.com/abdout/twenty.git
 cd twenty/packages/twenty-docker
 ./oracle-deploy.sh           # creates .env, then tells you to set DOMAIN/ACME_EMAIL
 nano .env                    # set DOMAIN=crm.databayt.org and a real ACME_EMAIL
