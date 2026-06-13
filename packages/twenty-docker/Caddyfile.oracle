@@ -1,0 +1,50 @@
+# Caddy reverse proxy for the single-host Twenty deployment.
+# Automatic HTTPS via Let's Encrypt (HTTP-01) — no certs to manage.
+#
+# Requirements for the cert to issue:
+#   - DNS A record  {$DOMAIN}  ->  this VM's public IP
+#   - Ports 80 and 443 reachable from the internet (Oracle security list + ufw)
+#
+# The server container serves BOTH the frontend and the API on :3000, so a
+# single origin is all that's needed.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy server:3000
+}
+
+# ───────────────────────────────────────────────────────────────────────────
+# MULTI-TENANT (workspace subdomains) — optional upgrade.
+# Twenty puts each workspace on its own subdomain when IS_MULTIWORKSPACE_ENABLED
+# is true, which needs a wildcard *.{$DOMAIN}. To enable it, REPLACE the block
+# above with the following (and set IS_MULTIWORKSPACE_ENABLED=true in .env, plus
+# add a `*.{$DOMAIN}` A record -> this VM):
+#
+# {
+# 	email {$ACME_EMAIL}
+# 	# Issues a cert per workspace subdomain on first request (no DNS API needed).
+# 	on_demand_tls {
+# 		ask http://server:3000/healthz
+# 	}
+# }
+#
+# {$DOMAIN} {
+# 	encode zstd gzip
+# 	reverse_proxy server:3000
+# }
+#
+# *.{$DOMAIN} {
+# 	encode zstd gzip
+# 	reverse_proxy server:3000
+# 	tls {
+# 		on_demand
+# 	}
+# }
+#
+# For many workspaces, prefer a single wildcard cert via the DNS-01 challenge
+# instead of on-demand — see ORACLE_FREE_DEPLOY.md > "Multi-tenant subdomains".
+# ───────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,7 @@
 **/**/.env
+# Real secret env files — never commit. Keep only *.example tracked.
+**/.env.production
+**/.env.oracle
 .DS_Store
 /.idea
 .claude/*

@@ -1,0 +1,121 @@
+# Twenty CRM — single-host, fully self-contained stack for a free VM
+# (e.g. Oracle Cloud "Always Free" ARM / Ampere A1).
+#
+# Runs the WHOLE app on one machine: Caddy (auto-HTTPS) -> server (API + the
+# bundled frontend) + worker (background jobs) + Postgres + Redis. No external
+# services required; Postgres data lives on the VM disk.
+#
+# Usage:  ./oracle-deploy.sh         (generates secrets into .env, then `up -d`)
+# Manual: run ./oracle-deploy.sh ONCE first so .env exists and is populated
+#         (PG_DATABASE_PASSWORD/secrets), then:
+#         docker compose -f docker-compose.oracle.yml --env-file .env up -d
+#
+# Only ports 80/443 are exposed to the internet; the app, db and redis are
+# reachable only on the internal compose network.
+
+name: twenty
+
+services:
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile.oracle:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - server
+
+  server:
+    image: twentycrm/twenty:${TAG:-latest}
+    restart: always
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: 3000
+      # Single-origin: the server serves the frontend AND the API at SERVER_URL.
+      SERVER_URL: https://${DOMAIN}
+      FRONTEND_URL: https://${DOMAIN}
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/${PG_DATABASE_NAME:-default}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      APP_SECRET: ${APP_SECRET}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      # Single-workspace by default (everything at https://DOMAIN). The server
+      # casts this var by TRUTHINESS, so the string "false" would WRONGLY enable
+      # multi-workspace — there is no falsey string. To enable multi-tenant
+      # workspace subdomains, UNCOMMENT both lines below (and update Caddyfile):
+      # IS_MULTIWORKSPACE_ENABLED: "true"
+      # DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN:-app}
+      # Caddy reaches the server over the Docker bridge network (172.16/12),
+      # which the server's default TRUST_PROXY ('…, uniquelocal') already trusts,
+      # so X-Forwarded-Proto: https from Caddy is honored without an override.
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    image: twentycrm/twenty:${TAG:-latest}
+    restart: always
+    command: ["yarn", "worker:prod"]
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      SERVER_URL: https://${DOMAIN}
+      FRONTEND_URL: https://${DOMAIN}
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD}@${PG_DATABASE_HOST:-db}:${PG_DATABASE_PORT:-5432}/${PG_DATABASE_NAME:-default}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      APP_SECRET: ${APP_SECRET}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      # Migrations + cron are owned by the server container, not the worker.
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+    depends_on:
+      server:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${PG_DATABASE_NAME:-default}
+      POSTGRES_USER: ${PG_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD}
+    healthcheck:
+      test: pg_isready -U ${PG_DATABASE_USER:-postgres} -h localhost -d ${PG_DATABASE_NAME:-default}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis
+    restart: always
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:
+  server-local-data:
+  caddy-data:
+  caddy-config:
