@@ -4,10 +4,30 @@
   "mirrorBranch": "main",
   "integrationBranch": "feat/hogwarts-workspace-setup",
   "frontendStrategy": "rebase",
-  "lastSyncedUpstreamSha": "",
-  "lastSyncedDate": "",
-  "upstreamReleaseTag": "",
+  "lastSyncedUpstreamSha": "2662fda6472689019f73e68cf5edd7cfcc1198b4",
+  "lastSyncedDate": "2026-06-27",
+  "upstreamReleaseTag": "twenty/v2.16.0",
   "directPullPackages": ["twenty-front", "twenty-shared", "twenty-ui", "twenty-emails"],
   "portPackages": ["twenty-server"],
-  "pendingBackendWorklist": []
+  "_worklistNote": "Backend port worklist produced by upstream-scout for the bfefcd3755..2662fda647 range (v2.10.0->v2.16.0). These are upstream twenty-server behavior changes to re-express in the future packages/twenty-api. Ordered by importance. Mirror status in .claude/docs/MIGRATION-LEDGER.md.",
+  "pendingBackendWorklist": [
+    { "area": "workflow + logic-functions", "files": 155, "behaviorDelta": "HTTP logic functions served on isolated *.withtwenty.com domain; server-exposed logic functions run in owner workspace; iterator can take whole item; each cron trigger dispatched exactly once; workflow runs listable via AI/MCP", "migration": true, "status": "pending" },
+    { "area": "ai agents / tools / applications", "files": 170, "behaviorDelta": "AI model catalog synced from models.dev; large tool-output + navigation tools; AI/MCP writes stamped FieldActorSource.AGENT; pre-installed-app install backfill; ai-chat stream kept alive on silent SSE death + idempotent stream job", "migration": true, "status": "pending" },
+    { "area": "messaging + connected-account + webhooks", "files": 130, "behaviorDelta": "webhook push-sync for Gmail/Calendar/Microsoft; skip webhook-active channels in list-fetch crons until stale; link emails by Reply-To as REPLY_TO participant; IMAP for non-RFC servers; Gmail folder backfill", "migration": true, "status": "pending" },
+    { "area": "metadata engine (object/field/flat-*)", "files": 280, "behaviorDelta": "search-field-metadata wired + search-vector refactor; deterministic universalIdentifiers for server side-effects; flat-entity util factorization; isCustom removed from objects/fields; atomic mergeMany; resizable kanban column width", "migration": true, "status": "pending" },
+    { "area": "billing", "files": 40, "behaviorDelta": "Stripe Payment Element in onboarding + add-card trial-end modal; invoice on seat increase; credit a workspace billing balance; trial emails -> timed reminders; post-call-recording ingestion & billing; in-chat top-up", "migration": true, "status": "pending" },
+    { "area": "emailing-domain / marketing emails", "files": 90, "behaviorDelta": "new marketing-emails feature; emailing-domain verification + unsubscribe host/topic; message-suppression table; legacy encryption deprecated", "migration": true, "status": "pending" },
+    { "area": "calendar + IMAP/SMTP/CalDAV + call-recording", "files": 40, "behaviorDelta": "ID-first chunked import for Google & CalDAV; honor IMAP/SMTP encryption setting; mark channel completed on no-events; call-recording schema + meeting-bot scaffold; timeline activity-kind registry", "migration": true, "status": "pending" },
+    { "area": "auth / onboarding / 2FA / impersonation", "files": 50, "behaviorDelta": "pick workspace subdomain at sign-up; collect workspace logo; always show Create-Profile step; centralized impersonation validation; invite prefilled from connected calendar. NOTE our auth.util.ts/passwordRegex edits do NOT collide", "migration": false, "status": "pending" },
+    { "area": "dashboard / page-layout / charts", "files": 20, "behaviorDelta": "BREAKING: chart cache -> key-based data plumbing (#21743); per-view-widget limit; number-format on aggregate chart; group records by many-to-one relation", "migration": true, "status": "pending" },
+    { "area": "api layer (graphql / rest / mcp / common)", "files": 44, "behaviorDelta": "MCP can list workflows; backend normalizes date-time field input (timeline crash fix); morph to-many null fixes on record creation", "migration": false, "status": "pending" },
+    { "area": "admin / config / encryption / enterprise", "files": 30, "behaviorDelta": "secret-encryption rotation handlers (legacy encryption deprecation #21831); admin-panel, twenty-config, client-config, feature-flag, enterprise updates", "migration": true, "status": "pending" },
+    { "area": "record CRUD + impersonation guards", "files": 25, "behaviorDelta": "record-crud side-effect migration merge (isSystemSideEffect, merged createOneObject/createOneField migrations); record-actor-source stamping", "migration": true, "status": "pending" }
+  ],
+  "_frameworkSignals": [
+    "security: @nestjs/graphql 12->13 + @ptc-org/nestjs-query 4->9 (#21402) — API-contract churn to mirror",
+    "root package.json resolutions rewritten for security CVEs; yarn.lock changed (run yarn install)",
+    "new core tables: message_suppression, unsubscribe_topic; new cols connected_account.archived_at, emailing_domain.unsubscribe_host; rename is_ui_read_only->is_ui_editable; drop isCustom on object/field metadata",
+    "no Node version bump; packageManager stays yarn@4.13.0"
+  ]
 }
