@@ -35,5 +35,5 @@ This directory is **committed** so the whole databayt team (and the sales depart
 ## One-time setup (not done automatically)
 - Set `GITHUB_TOKEN` in your shell env for the github MCP.
 - Add the upstream remote: `git remote add upstream https://github.com/twentyhq/twenty.git` (the `/upstream-sync` skill also does this).
-- Recommended: rename the integration branch `feat/hogwarts-workspace-setup` → `databayt` and update `integrationBranch` in `upstream-state.json`.
+- The integration branch is `databayt` (renamed from `feat/hogwarts-workspace-setup`); it's tracked by `integrationBranch` in `upstream-state.json`.
 - Local-only overrides go in `.claude/settings.local.json` (gitignored).

@@ -2,7 +2,7 @@
 
 **Goal:** Get Twenty (open-source CRM) running 24/7 at `crm.databayt.org` for ~$0/mo.
 
-**Repo:** <https://github.com/abdout/twenty> → branch **`feat/hogwarts-workspace-setup`**
+**Repo:** <https://github.com/abdout/twenty> → branch **`databayt`**
 **Read first:** [`packages/twenty-docker/ORACLE_FREE_DEPLOY.md`](packages/twenty-docker/ORACLE_FREE_DEPLOY.md) — the full runbook. The whole deploy kit (compose file, Caddy config, env template, deploy script) lives in that folder.
 
 ## Done ✅
@@ -17,7 +17,7 @@
 4. Repoint `crm.databayt.org` DNS from Vercel → the VM's public IP (runbook §4).
 5. Deploy:
    ```bash
-   git clone -b feat/hogwarts-workspace-setup https://github.com/abdout/twenty.git
+   git clone -b databayt https://github.com/abdout/twenty.git
    cd twenty/packages/twenty-docker
    ./oracle-deploy.sh
    ```

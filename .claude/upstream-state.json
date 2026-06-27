@@ -2,7 +2,7 @@
   "_comment": "Source of truth for upstream tracking. Updated by the /upstream-sync skill. Committed so the whole team shares the same sync point. See .claude/docs/UPSTREAM.md.",
   "upstreamRemoteUrl": "https://github.com/twentyhq/twenty.git",
   "mirrorBranch": "main",
-  "integrationBranch": "feat/hogwarts-workspace-setup",
+  "integrationBranch": "databayt",
   "frontendStrategy": "rebase",
   "lastSyncedUpstreamSha": "2662fda6472689019f73e68cf5edd7cfcc1198b4",
   "lastSyncedDate": "2026-06-27",

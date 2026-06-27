@@ -12,7 +12,7 @@ This is the rulebook the `.claude/` config enforces. Read it before any sync, po
    ```
    If `--ff-only` ever fails, `main` was dirtied — fix that first; it must always equal an exact upstream commit so `git diff upstream/main` is meaningful.
 
-2. **All custom work is additive and isolated** on the integration branch (`integrationBranch` in `.claude/upstream-state.json`; currently `feat/hogwarts-workspace-setup`, recommended rename → `databayt`). Prefer **new files** or the **`packages/twenty-api` port layer** over in-place edits to upstream source. `git diff main...<integrationBranch>` must always read as a clean "everything we added."
+2. **All custom work is additive and isolated** on the integration branch (`integrationBranch` in `.claude/upstream-state.json`; currently `databayt`). Prefer **new files** or the **`packages/twenty-api` port layer** over in-place edits to upstream source. `git diff main...<integrationBranch>` must always read as a clean "everything we added."
 
 3. **Frontend pulls directly; backend pulls a refactor.**
    - **Direct-pull** (`twenty-front`, `twenty-shared`, `twenty-ui`, `twenty-emails`): merge/rebase upstream 1:1, build-validate. These stay ~identical to upstream.
