@@ -40,13 +40,15 @@ upstream (twentyhq/twenty, read-only)
 ## Known divergence set (keep this short — every entry is rebase friction)
 In-place edits to upstream source we currently carry. Convert to additive overlays or upstream contributions when feasible.
 
+As of the 2026-06-27 sync (twenty `v2.16.0`), `git diff main...<integrationBranch>` = 46 files (+1637/−83). The in-place edits to upstream source:
+
 | Path | What | Why | Plan |
 | --- | --- | --- | --- |
-| `packages/twenty-server/src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant.ts` | hogwarts workspace + abdout/ali users (pwd 1234) | databayt demo data | move to an additive seed module |
-| `packages/twenty-server/src/engine/workspace-manager/dev-seeder/data/constants/hogwarts-company-data-seeds.constant.ts` | hogwarts company seeds | databayt demo data | additive seed module |
-| `packages/twenty-server/src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant.ts` | seed members | databayt demo data | additive seed module |
-| `packages/twenty-server/src/.../passwordRegex.ts`, `auth.util.ts`, `instrument.ts` | small auth/instrumentation tweaks | (confirm during first sync) | evaluate: revert, override, or upstream |
+| `packages/twenty-server/src/engine/workspace-manager/dev-seeder/**` (~13 files: `core/constants/seeder-workspaces.constant.ts`, `core/utils/seed-users.util.ts`, `seed-user-workspaces.util.ts`, `seed-agents.util.ts`, `data/constants/{hogwarts-company,dashboard,workspace-member}-data-seeds.constant.ts`, `data/services/{dev-seeder-data,timeline-activity-seeder}.service.ts`, `core/services/dev-seeder-permissions.service.ts`, `metadata/...`, plus `database/commands/data-seed-dev-workspace.command.ts`) | hogwarts demo workspace + abdout/ali users (pwd 1234) + company/member/dashboard seeds | databayt demo/sales data | **biggest rebase friction** — every sync conflicts here (resolved as unions with upstream). Move to an additive seed module to stop the friction. |
+| `packages/twenty-front/src/modules/auth/utils/passwordRegex.ts`, `packages/twenty-server/src/engine/core-modules/auth/auth.util.ts` | relaxed password rules (allow weak demo password `1234`) | demo login | gate behind an env flag / additive override; or upstream a "dev weak-password" option |
+| `packages/twenty-server/src/instrument.ts` | 1-line instrumentation tweak | (confirm) | evaluate: revert or upstream |
 
+> Note: `auth.util.ts`, `passwordRegex.ts`, `instrument.ts` did NOT conflict on the 2026-06-27 sync (upstream changed elsewhere). The dev-seeder is the only recurring conflict zone.
 > The `divergence-auditor` agent re-derives this list from git; keep this table in sync with reality during each `/upstream-sync`.
 
 ## Things we deliberately keep additive (not divergence — these are ours, in new files)
