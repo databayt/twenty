@@ -12,12 +12,14 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 ## Phase 0 — facade scaffolding
 | Item | Status | Notes |
 | --- | --- | --- |
-| `packages/twenty-api` Nx package (Next 16 + Prisma 6) | ⬜ | not created yet |
-| `lib/proxy.ts` + `lib/ported-routes.ts` (strangler facade) | ⬜ | |
-| `app/graphql/route.ts` (proxy → legacy) | ⬜ | keep proxied until GraphQL milestone |
-| `app/rest/[...path]/route.ts` (proxy → legacy) | ⬜ | |
-| Vercel project + `nx build twenty-api` green | ⬜ | prove monorepo build on Vercel |
-| Neon connectivity from `twenty-api` | ⬜ | DB already linked |
+| `packages/twenty-api` Nx package (Next 16 + React 19) | ✅ | created 2026-06-27; registered in root workspaces; nx run-commands targets (build/dev/start/typecheck) |
+| `lib/proxy.ts` + `lib/ported-routes.ts` (strangler facade) | ✅ | path-transparent fetch passthrough + native-route registry |
+| `app/healthz/route.ts` (native) | ✅ | first native handler |
+| `app/graphql/route.ts` (proxy → legacy) | 🔁 | proxied; keep whole until the GraphQL milestone |
+| `app/[...slug]/route.ts` catch-all (proxy → legacy) | 🔁 | covers /metadata, /rest/*, /files, /auth/*, … verbatim |
+| `nx build twenty-api` green | ⬜ | building/validating now |
+| Vercel project (root dir = packages/twenty-api) | ⬜ | set LEGACY_SERVER_URL; point frontend at it |
+| Neon connectivity from `twenty-api` | ⬜ | Slice 1+ (Prisma); DB already linked |
 
 ## Core surface
 | Module | Status | Notes |

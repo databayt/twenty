@@ -82,6 +82,7 @@
     "packages": [
       "packages/twenty-front",
       "packages/twenty-server",
+      "packages/twenty-api",
       "packages/twenty-emails",
       "packages/twenty-ui",
       "packages/twenty-utils",
