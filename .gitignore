@@ -4,8 +4,16 @@
 **/.env.oracle
 .DS_Store
 /.idea
+# Claude config: upstream ignores all of .claude/ except settings.json.
+# databayt commits the full workflow (skills/agents/hooks/docs); re-include those, keep local overrides ignored.
 .claude/*
 !.claude/settings.json
+!.claude/README.md
+!.claude/upstream-state.json
+!.claude/skills/
+!.claude/agents/
+!.claude/hooks/
+!.claude/docs/
 .cursor/debug-*.log
 **/**/node_modules/
 .cache
