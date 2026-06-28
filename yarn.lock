@@ -54377,6 +54377,8 @@ __metadata:
     "@types/jsonwebtoken": "npm:^9.0.7"
     "@types/node": "npm:^22.10.0"
     "@types/react": "npm:^19.2.0"
+    graphql: "npm:16.8.1"
+    graphql-yoga: "npm:4.0.5"
     inngest: "npm:^4.11.0"
     jsonwebtoken: "npm:^9.0.2"
     next: "npm:^16.0.0"

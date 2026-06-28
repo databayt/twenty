@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
+    "graphql": "16.8.1",
+    "graphql-yoga": "4.0.5",
     "inngest": "^4.11.0",
     "jsonwebtoken": "^9.0.2",
     "next": "^16.0.0",

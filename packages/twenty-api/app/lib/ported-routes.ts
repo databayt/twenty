@@ -7,6 +7,7 @@ export const NATIVE_ROUTE_PREFIXES: readonly string[] = [
   '/rest/companies',
   '/rest/metadata/fields',
   '/api/inngest',
+  '/graphql-native',
 ];
 
 export const isNativeRoute = (pathname: string): boolean =>

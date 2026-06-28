@@ -34,7 +34,7 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 ## Feature modules (fill in from the upstream-scout worklist)
 | Module | Status | Upstream range | Notes |
 | --- | --- | --- | --- |
-| GraphQL layer (Yoga in route) | ⬜ | | dedicated milestone; no partial schema split |
+| GraphQL layer (Yoga in route) | 🔁 | | Slice 5 FIRST increment: native `graphql-yoga` at **`/graphql-native`** (real `/graphql` stays PROXIED — no partial split there) serving an authenticated Relay `companies` query (Company: id/name/createdAt) reusing the Slice 1–2 spine; auth in the Yoga context factory → UNAUTHENTICATED 401. **Deferred:** the full metadata-driven dynamic schema, all other types, mutations, filters/orderBy/real pagination, replacing `/graphql`, subscriptions, codegen parity |
 | Standard objects CRUD (Company first) | ✅ | | Slice 2: authenticated native `GET` + `POST /rest/companies` (live-verified: 3 companies read, create persisted, negatives 401). Remaining: GET single/:id, PATCH/DELETE, batch, filter/order/depth — still proxied to legacy via the catch-all |
 | Messaging import | ⬜ | | Inngest job |
 | Calendar import | ⬜ | | Inngest job |
