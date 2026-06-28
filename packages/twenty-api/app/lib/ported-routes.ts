@@ -5,6 +5,7 @@
 export const NATIVE_ROUTE_PREFIXES: readonly string[] = [
   '/healthz',
   '/rest/companies',
+  '/rest/metadata/fields',
 ];
 
 export const isNativeRoute = (pathname: string): boolean =>

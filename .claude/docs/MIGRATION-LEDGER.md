@@ -25,10 +25,10 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 | Module | Status | Notes |
 | --- | --- | --- |
 | `healthz` | ✅ | native handler |
-| Prisma schema: `core` tables | 🔁 | partial: `Workspace`, `SigningKey`, `ApiKey`, `UserWorkspace` (Slices 1–2); add models as ports need them |
-| Prisma schema: `metadata` tables | ⬜ | objectMetadata, fieldMetadata, … |
+| Prisma schema: `core` tables | 🔁 | partial: `Workspace`, `SigningKey`, `ApiKey`, `UserWorkspace`, `ObjectMetadata`, `FieldMetadata`, `Application` (Slices 1–3); add models as ports need them |
+| Metadata (objectMetadata/fieldMetadata) | 🔁 | NB: live in the `core` schema in this build (no separate `metadata` schema). Partial models added Slice 3 |
 | Auth / token verification | ✅ | Slice 2: `app/lib/{jwt,signing-key,auth}.ts` — faithful dual-algo verify (ES256 via core.signingKey kid / HS256 APP_SECRET-derived legacy), membership check, API-key revoke/expiry recheck. **Gap:** role/object permissions NOT yet enforced (any valid workspace token can read+write) — before broad rollout |
-| `workspace-migration-runner` (per-workspace DDL) | ⬜ | **the crux** — Slice 3 |
+| `workspace-migration-runner` (per-workspace DDL) | 🔁 | **the crux** — Slice 3 FIRST INCREMENT done: `app/lib/metadata/*` + `POST /rest/metadata/fields` create one TEXT scalar field atomically (fieldMetadata insert + `ALTER TABLE ADD COLUMN` + metadataVersion bump in one tx). Live-verified vs Hogwarts then cleaned net-zero. **Deferred:** composite/relation/enum/tsvector types, object creation, the computed-diff/flat-entity engine, indexes, GraphQL/metadata cache rebuild, down-migrations |
 | Tenant spine (`search_path` per-workspace read+write) | ✅ | `app/lib/workspace.ts`: resolve schema (by subdomain or id) + raw read/insert w/ injection guard (Slices 1–2) |
 
 ## Feature modules (fill in from the upstream-scout worklist)

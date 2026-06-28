@@ -18,10 +18,11 @@ datasource db {
 
 // Partial model of core.workspace — enough to resolve a tenant to its dedicated Postgres schema.
 model Workspace {
-  id             String  @id @db.Uuid
-  displayName    String?
-  subdomain      String
-  databaseSchema String?
+  id              String  @id @db.Uuid
+  displayName     String?
+  subdomain       String
+  databaseSchema  String?
+  metadataVersion Int     @default(1)
 
   @@map("workspace")
   @@schema("core")
@@ -59,5 +60,54 @@ model UserWorkspace {
   workspaceId String @db.Uuid
 
   @@map("userWorkspace")
+  @@schema("core")
+}
+
+// --- Slice 3: metadata-driven migration runner (partial models; objectMetadata/fieldMetadata live
+// in the `core` schema in this build, not a separate `metadata` schema). ---
+
+// An object definition; its physical table lives in the workspace schema, named from nameSingular
+// (custom objects get a leading underscore — see computeObjectTargetTable).
+model ObjectMetadata {
+  id            String  @id @db.Uuid
+  nameSingular  String
+  isCustom      Boolean @default(false)
+  workspaceId   String  @db.Uuid
+
+  @@map("objectMetadata")
+  @@schema("core")
+}
+
+// A field definition; for a scalar type the physical column name is `name` verbatim. Partial model —
+// only the columns this slice writes/reads. id/createdAt/updatedAt + the boolean flags fall back to
+// their DB defaults; objectMetadataId/type/name/label/workspaceId/universalIdentifier/applicationId
+// are NOT NULL with no default and must be supplied.
+model FieldMetadata {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  objectMetadataId    String   @db.Uuid
+  type                String
+  name                String
+  label               String
+  isCustom            Boolean  @default(false)
+  isActive            Boolean  @default(false)
+  isNullable          Boolean? @default(true)
+  defaultValue        Json?
+  workspaceId         String   @db.Uuid
+  universalIdentifier String   @db.Uuid
+  applicationId       String   @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("fieldMetadata")
+  @@schema("core")
+}
+
+// Used to resolve the workspace's "Custom" application id (fieldMetadata.applicationId is NOT NULL).
+model Application {
+  id          String @id @db.Uuid
+  name        String
+  workspaceId String @db.Uuid
+
+  @@map("application")
   @@schema("core")
 }
