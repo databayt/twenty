@@ -41,7 +41,9 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 | Workflow engine | ⬜ | | Inngest |
 | Billing | ⬜ | | |
 | GraphQL subscriptions | ⬜ | | last; SSE/polling or Ably |
-| Cron jobs (22) → Inngest scheduled fns | ⬜ | | |
+| Background jobs infra (Inngest) | 🔁 | | Slice 4: `inngest` + `app/api/inngest/route.ts` serve endpoint (the Vercel-native replacement for the always-on BullMQ worker). Job logic factored as plain testable libs in `app/lib/jobs/*`; Inngest fns are thin `step.run` wrappers in `app/lib/inngest/functions/*` |
+| Cron jobs (22) → Inngest scheduled fns | 🔁 | | Slice 4 FIRST: `workspace-metrics-snapshot` cron (`TZ=UTC 30 2 * * *`) — counts active workspaces + per-workspace companies, idempotent record into core.keyValuePair. Live-verified net-zero. Other ~21 (trash/suspended/onboarding cleanup, event-log→ClickHouse, signing-key rotation, workflow runs, billing reminder…) deferred |
+| Event-driven jobs | 🔁 | | Slice 4: `company.created` event emitted (best-effort) from `POST /rest/companies` → `company-created` Inngest fn (read-only reaction). Per-workspace fan-out + a MessageQueue-parity dispatch facade deferred |
 | ClickHouse analytics | ⬜ | | external or defer |
 
 > When the upstream-scout produces a backend port worklist, add/refresh rows here so the ledger always reflects what's left.

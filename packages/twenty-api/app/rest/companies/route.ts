@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { authenticateRequest, AuthError, type AuthContext } from '../../lib/auth';
+import { inngest } from '../../lib/inngest/client';
 import {
   createWorkspaceCompany,
   listWorkspaceCompanies,
@@ -57,6 +58,23 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   const company = await createWorkspaceCompany(ctx.databaseSchema, {
     name: body?.name ?? null,
   });
+
+  // Fire-and-forget event -> the Inngest `company-created` job (replaces twenty's entity-event ->
+  // worker-queue coupling). Best-effort: payload is sourced only from the verified token + created
+  // row, and a dev-server-down / missing event key must never fail the 201.
+  try {
+    await inngest.send({
+      name: 'twenty-api/company.created',
+      data: {
+        workspaceId: ctx.workspaceId,
+        databaseSchema: ctx.databaseSchema,
+        companyId: company.id,
+        name: company.name,
+      },
+    });
+  } catch {
+    // intentionally ignored — event coupling must not regress the create endpoint
+  }
 
   // Upstream create envelope: data.create<Singular> (rest-api-create-one.handler.ts).
   return NextResponse.json({ data: { createCompany: company } }, { status: 201 });
