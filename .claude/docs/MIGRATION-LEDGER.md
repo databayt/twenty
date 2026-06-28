@@ -36,7 +36,7 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 | Module | Status | Upstream range | Notes |
 | --- | --- | --- | --- |
 | GraphQL layer (Yoga in route) | 🔁 | | Slice 5 FIRST increment: native `graphql-yoga` at **`/graphql-native`** (real `/graphql` stays PROXIED — no partial split there) serving an authenticated Relay `companies` query (Company: id/name/createdAt) reusing the Slice 1–2 spine; auth in the Yoga context factory → UNAUTHENTICATED 401. **Deferred:** the full metadata-driven dynamic schema, all other types, mutations, filters/orderBy/real pagination, replacing `/graphql`, subscriptions, codegen parity |
-| Standard objects CRUD (Company first) | ✅ | | Slice 2: authenticated native `GET` + `POST /rest/companies` (live-verified: 3 companies read, create persisted, negatives 401). Remaining: GET single/:id, PATCH/DELETE, batch, filter/order/depth — still proxied to legacy via the catch-all |
+| Standard objects CRUD (Company first) | ✅ | | Slices 2 + 7: full native Company REST — `GET`/`POST /rest/companies` (list+create) and `GET`/`PATCH`+`PUT`/`DELETE /rest/companies/:id`. DELETE is upstream-faithful (hard destroy by default; `?soft_delete=true` soft-deletes via deletedAt); reads filter `deletedAt IS NULL`; each method permission-gated (read/update/softDelete/destroy). Live-verified in-process + HTTP, net-zero. Auth/permission guards DRY'd into `app/lib/http.ts`. Remaining: batch, filter/order/depth, restore, composite-field updates, other objects |
 | Messaging import | ⬜ | | Inngest job |
 | Calendar import | ⬜ | | Inngest job |
 | Workflow engine | ⬜ | | Inngest |

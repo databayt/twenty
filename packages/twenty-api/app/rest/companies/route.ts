@@ -1,51 +1,18 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { authenticateRequest, AuthError, type AuthContext } from '../../lib/auth';
+import { authOrResponse, permitOrResponse } from '../../lib/http';
 import { inngest } from '../../lib/inngest/client';
-import {
-  assertObjectPermission,
-  PermissionError,
-  type ObjectOperation,
-} from '../../lib/permissions';
 import {
   createWorkspaceCompany,
   listWorkspaceCompanies,
 } from '../../lib/workspace';
 
-// First fully-ported endpoint: authenticated, native /rest/companies (list + create). Auth + tenant
-// come ONLY from the verified bearer token's workspaceId claim, exactly like twenty-server. Every
-// other /rest/* path still falls through to the legacy server via app/[...slug]/route.ts.
+// Native /rest/companies collection (list + create). Auth + tenant come ONLY from the verified bearer
+// token's workspaceId claim, and the role's object permission is enforced, exactly like twenty-server.
+// Every other /rest/* path still falls through to the legacy server via app/[...slug]/route.ts.
 // jsonwebtoken + node:crypto + Prisma require the Node runtime.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const authOrResponse = async (
-  request: NextRequest,
-): Promise<AuthContext | NextResponse> => {
-  try {
-    return await authenticateRequest(request);
-  } catch (error) {
-    const authError =
-      error instanceof AuthError ? error : new AuthError('Unauthorized');
-    return NextResponse.json({ error: authError.message }, { status: authError.status });
-  }
-};
-
-// Enforce the authed role's Company permission for the operation; returns a 403 response on deny.
-const permitOrResponse = async (
-  ctx: AuthContext,
-  operation: ObjectOperation,
-): Promise<NextResponse | null> => {
-  try {
-    await assertObjectPermission(ctx, { nameSingular: 'company' }, operation);
-    return null;
-  } catch (error) {
-    if (error instanceof PermissionError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
-    }
-    throw error;
-  }
-};
 
 export const GET = async (request: NextRequest): Promise<NextResponse> => {
   const ctx = await authOrResponse(request);
@@ -53,7 +20,7 @@ export const GET = async (request: NextRequest): Promise<NextResponse> => {
     return ctx;
   }
 
-  const denied = await permitOrResponse(ctx, 'read');
+  const denied = await permitOrResponse(ctx, 'company', 'read');
   if (denied) {
     return denied;
   }
@@ -75,7 +42,7 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   }
 
   // create maps to the object's update flag (upstream has no separate create flag).
-  const denied = await permitOrResponse(ctx, 'create');
+  const denied = await permitOrResponse(ctx, 'company', 'create');
   if (denied) {
     return denied;
   }
