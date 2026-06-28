@@ -3,9 +3,17 @@ import { createSchema, createYoga, type YogaInitialContext } from 'graphql-yoga'
 import { type NextRequest } from 'next/server';
 
 import { authenticateRequest, AuthError, type AuthContext } from '../lib/auth';
-import { assertObjectPermission, PermissionError } from '../lib/permissions';
 import {
+  assertObjectPermission,
+  PermissionError,
+  type ObjectOperation,
+} from '../lib/permissions';
+import {
+  createWorkspaceCompany,
+  destroyWorkspaceCompany,
   listWorkspaceCompanies,
+  softDeleteWorkspaceCompany,
+  updateWorkspaceCompany,
   type WorkspaceCompany,
 } from '../lib/workspace';
 
@@ -25,6 +33,33 @@ const dateTimeScalar = new GraphQLScalarType<Date | string, string>({
   serialize: (value: unknown): string =>
     value instanceof Date ? value.toISOString() : String(value),
 });
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const gqlError = (message: string, code: string, status: number): GraphQLError =>
+  new GraphQLError(message, { extensions: { code, http: { status } } });
+
+// Map a denied object permission to a GraphQL FORBIDDEN/403 (mirrors the query resolver).
+const assertCompanyPermission = async (
+  context: GraphQLContext,
+  operation: ObjectOperation,
+): Promise<void> => {
+  try {
+    await assertObjectPermission(context.auth, { nameSingular: 'company' }, operation);
+  } catch (error) {
+    if (error instanceof PermissionError) {
+      throw gqlError(error.message, 'FORBIDDEN', error.status);
+    }
+    throw error;
+  }
+};
+
+const requireUuid = (id: string): void => {
+  if (!UUID_RE.test(id)) {
+    throw gqlError(`'${id}' is not a valid UUID`, 'BAD_USER_INPUT', 400);
+  }
+};
 
 const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
@@ -54,8 +89,23 @@ const schema = createSchema<GraphQLContext>({
       totalCount: Int
     }
 
+    input CompanyCreateInput {
+      name: String
+    }
+
+    input CompanyUpdateInput {
+      name: String
+    }
+
     type Query {
       companies(first: Int): CompanyConnection!
+    }
+
+    type Mutation {
+      createCompany(data: CompanyCreateInput!): Company!
+      updateCompany(id: ID!, data: CompanyUpdateInput!): Company
+      deleteCompany(id: ID!): Company
+      destroyCompany(id: ID!): Company
     }
   `,
   resolvers: {
@@ -104,6 +154,64 @@ const schema = createSchema<GraphQLContext>({
           },
           totalCount: rows.length,
         };
+      },
+    },
+    Mutation: {
+      // Mutations reuse the Slice 7 company write helpers + Slice 6 permissions. data is name-only for
+      // this slice (twenty's input is composite-heavy). deleteCompany = soft, destroyCompany = hard.
+      createCompany: async (
+        _parent: unknown,
+        args: { data: { name?: string | null } },
+        context: GraphQLContext,
+      ): Promise<WorkspaceCompany> => {
+        await assertCompanyPermission(context, 'create');
+        return createWorkspaceCompany(context.auth.databaseSchema, {
+          name: args.data?.name ?? null,
+        });
+      },
+      updateCompany: async (
+        _parent: unknown,
+        args: { id: string; data: { name?: string | null } },
+        context: GraphQLContext,
+      ): Promise<WorkspaceCompany> => {
+        await assertCompanyPermission(context, 'update');
+        requireUuid(args.id);
+        if (!args.data || !('name' in args.data)) {
+          throw gqlError('No updatable fields provided', 'BAD_USER_INPUT', 400);
+        }
+        const row = await updateWorkspaceCompany(context.auth.databaseSchema, args.id, {
+          name: args.data.name ?? null,
+        });
+        if (!row) {
+          throw gqlError('Record not found', 'NOT_FOUND', 404);
+        }
+        return row;
+      },
+      deleteCompany: async (
+        _parent: unknown,
+        args: { id: string },
+        context: GraphQLContext,
+      ): Promise<WorkspaceCompany> => {
+        await assertCompanyPermission(context, 'softDelete');
+        requireUuid(args.id);
+        const row = await softDeleteWorkspaceCompany(context.auth.databaseSchema, args.id);
+        if (!row) {
+          throw gqlError('Record not found', 'NOT_FOUND', 404);
+        }
+        return row;
+      },
+      destroyCompany: async (
+        _parent: unknown,
+        args: { id: string },
+        context: GraphQLContext,
+      ): Promise<{ id: string }> => {
+        await assertCompanyPermission(context, 'destroy');
+        requireUuid(args.id);
+        const row = await destroyWorkspaceCompany(context.auth.databaseSchema, args.id);
+        if (!row) {
+          throw gqlError('Record not found', 'NOT_FOUND', 404);
+        }
+        return { id: row.id };
       },
     },
   },
