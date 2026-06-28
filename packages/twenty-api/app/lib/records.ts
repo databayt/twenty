@@ -114,12 +114,14 @@ export const listRecords = async (
   tableName: string,
   columns: string[],
   limit = 50,
+  composites: CompositeReadPlan[] = [],
 ): Promise<Record<string, unknown>[]> => {
   assertIdentifiers(databaseSchema, tableName, columns);
-  return prisma.$queryRawUnsafe<Record<string, unknown>[]>(
+  const rows = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(
     `SELECT ${columnList(columns)} FROM ${escapeIdentifier(databaseSchema)}.${escapeIdentifier(tableName)} WHERE "deletedAt" IS NULL ORDER BY "id" ASC NULLS FIRST LIMIT $1`,
     limit,
   );
+  return composites.length ? rows.map((row) => reNestRecord(row, composites)) : rows;
 };
 
 export const getRecord = async (
@@ -127,13 +129,18 @@ export const getRecord = async (
   tableName: string,
   columns: string[],
   id: string,
+  composites: CompositeReadPlan[] = [],
 ): Promise<Record<string, unknown> | null> => {
   assertIdentifiers(databaseSchema, tableName, columns);
   const rows = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(
     `SELECT ${columnList(columns)} FROM ${escapeIdentifier(databaseSchema)}.${escapeIdentifier(tableName)} WHERE "id" = $1::uuid AND "deletedAt" IS NULL LIMIT 1`,
     id,
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+  return composites.length ? reNestRecord(row, composites) : row;
 };
 
 // --- Slice 9: generic writes (scalar fields). Writable = READ scalars minus POSITION (system-managed).
@@ -394,4 +401,299 @@ export const destroyRecord = async (
     id,
   );
   return rows[0] ?? null;
+};
+
+// --- Slice 11: composite field READ expansion in the generic reader.
+// twenty stores each composite field (ACTOR/ADDRESS/CURRENCY/EMAILS/FULL_NAME/LINKS/PHONES/RICH_TEXT)
+// as several physical columns named `field.name + Capitalize(prop)`. TwentyORM's formatResult selects
+// those sub-columns and re-nests them under the field name. We mirror that for READ only: expand the
+// SELECT to include the sub-columns, then collapse each group back into a nested object, applying
+// twenty's per-prop null-equivalents (TEXT -> '', array -> [], object -> {}, numeric -> raw/coerced).
+// Composite WRITES stay deferred (the generic POST/PATCH still only accept scalars).
+
+type CompositeCoerce = 'int' | 'float' | 'none';
+type CompositeNullEquivalent = 'string' | 'array' | 'object' | 'raw';
+
+type CompositePropDef = {
+  prop: string;
+  coerce: CompositeCoerce;
+  nullEquivalent: CompositeNullEquivalent;
+  isRequired: boolean;
+  // 'input' = hidden from writes but still READABLE; true/'output' = excluded from reads too.
+  hidden?: boolean | 'input' | 'output';
+};
+
+type CompositeTypeDef = {
+  // ACTOR alone collapses to null/default when every required sub-prop is empty; others always nest.
+  isRequiredPresent: boolean;
+  defaultWhenEmpty: Record<string, unknown> | null;
+  props: CompositePropDef[];
+};
+
+// The sub-column name is always `field.name + capitalize(prop)`, so only the prop list is stored here.
+const COMPOSITE_TYPE_DEFINITIONS: Readonly<Record<string, CompositeTypeDef>> = {
+  CURRENCY: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'amountMicros', coerce: 'int', nullEquivalent: 'raw', isRequired: false },
+      { prop: 'currencyCode', coerce: 'none', nullEquivalent: 'raw', isRequired: false },
+    ],
+  },
+  LINKS: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'primaryLinkLabel', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'primaryLinkUrl', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'secondaryLinks', coerce: 'none', nullEquivalent: 'array', isRequired: false },
+    ],
+  },
+  FULL_NAME: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'firstName', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'lastName', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+    ],
+  },
+  EMAILS: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'primaryEmail', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'additionalEmails', coerce: 'none', nullEquivalent: 'array', isRequired: false },
+    ],
+  },
+  PHONES: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'primaryPhoneNumber', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'primaryPhoneCountryCode', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'primaryPhoneCallingCode', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'additionalPhones', coerce: 'none', nullEquivalent: 'array', isRequired: false },
+    ],
+  },
+  ADDRESS: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'addressStreet1', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'addressStreet2', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'addressCity', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'addressPostcode', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'addressState', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'addressCountry', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+      { prop: 'addressLat', coerce: 'float', nullEquivalent: 'raw', isRequired: false },
+      { prop: 'addressLng', coerce: 'float', nullEquivalent: 'raw', isRequired: false },
+    ],
+  },
+  ACTOR: {
+    isRequiredPresent: true,
+    defaultWhenEmpty: { source: 'MANUAL', workspaceMemberId: null, name: '', context: {} },
+    props: [
+      { prop: 'source', coerce: 'none', nullEquivalent: 'raw', isRequired: true },
+      {
+        prop: 'workspaceMemberId',
+        coerce: 'none',
+        nullEquivalent: 'raw',
+        isRequired: false,
+        hidden: 'input',
+      },
+      { prop: 'name', coerce: 'none', nullEquivalent: 'string', isRequired: true, hidden: 'input' },
+      { prop: 'context', coerce: 'none', nullEquivalent: 'object', isRequired: false },
+    ],
+  },
+  RICH_TEXT: {
+    isRequiredPresent: false,
+    defaultWhenEmpty: null,
+    props: [
+      { prop: 'blocknote', coerce: 'none', nullEquivalent: 'raw', isRequired: false },
+      { prop: 'markdown', coerce: 'none', nullEquivalent: 'string', isRequired: false },
+    ],
+  },
+};
+
+// System composites are normally hidden from generic reads, but the audit ACTORs are useful + safe.
+const COMPOSITE_SYSTEM_READ_ALLOWLIST: ReadonlySet<string> = new Set([
+  'createdBy',
+  'updatedBy',
+]);
+
+export type CompositeReadSubColumn = {
+  prop: string;
+  column: string;
+  coerce: CompositeCoerce;
+  nullEquivalent: CompositeNullEquivalent;
+  isRequired: boolean;
+};
+
+export type CompositeReadPlan = {
+  field: string;
+  type: string;
+  isNullable: boolean;
+  isRequiredPresent: boolean;
+  defaultWhenEmpty: Record<string, unknown> | null;
+  subColumns: CompositeReadSubColumn[];
+};
+
+export type ObjectReadShape = {
+  selectColumns: string[];
+  composites: CompositeReadPlan[];
+};
+
+// Every physical column on a workspace table — used to drift-guard composite expansion so we never
+// SELECT a sub-column the table lacks (e.g. an updatedBy ACTOR present in metadata upstream but not
+// yet materialized in this fork's tables).
+export const getTableColumnSet = async (
+  databaseSchema: string,
+  tableName: string,
+): Promise<Set<string>> => {
+  if (!WORKSPACE_SCHEMA_RE.test(databaseSchema)) {
+    throw new Error(`Invalid workspace schema: ${databaseSchema}`);
+  }
+  if (!TABLE_NAME_RE.test(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
+  const rows = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
+    `SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2`,
+    databaseSchema,
+    tableName,
+  );
+  return new Set(rows.map((row) => row.column_name));
+};
+
+// The full READ shape for an object: the scalar SELECT list (byte-identical to Slice 8's) plus, for
+// each composite field, the sub-columns to SELECT and a plan to re-nest them. existingColumns drift-
+// guards each composite — a composite is skipped unless ALL its sub-columns physically exist.
+export const getObjectReadShape = async (
+  workspaceId: string,
+  objectMetadataId: string,
+  existingColumns?: ReadonlySet<string>,
+): Promise<ObjectReadShape> => {
+  const fields = await prisma.fieldMetadata.findMany({
+    where: { workspaceId, objectMetadataId, isActive: true },
+    select: { name: true, type: true, isSystem: true, isNullable: true },
+  });
+
+  const scalarNames = fields
+    .filter(
+      (field) =>
+        READ_SCALAR_FIELD_TYPES.has(field.type) &&
+        !field.isSystem &&
+        field.name !== 'deletedAt' &&
+        FIELD_NAME_RE.test(field.name),
+    )
+    .map((field) => field.name);
+
+  const composites: CompositeReadPlan[] = [];
+  const compositeColumns: string[] = [];
+  for (const field of fields) {
+    const def = COMPOSITE_TYPE_DEFINITIONS[field.type];
+    if (!def) {
+      continue;
+    }
+    if (!FIELD_NAME_RE.test(field.name)) {
+      continue;
+    }
+    // System composites are skipped unless explicitly allowlisted (the audit ACTORs).
+    if (field.isSystem && !COMPOSITE_SYSTEM_READ_ALLOWLIST.has(field.name)) {
+      continue;
+    }
+    const subColumns: CompositeReadSubColumn[] = def.props
+      .filter((prop) => !(prop.hidden === true || prop.hidden === 'output'))
+      .map((prop) => ({
+        prop: prop.prop,
+        column: field.name + capitalize(prop.prop),
+        coerce: prop.coerce,
+        nullEquivalent: prop.nullEquivalent,
+        isRequired: prop.isRequired,
+      }));
+    if (!subColumns.every((sub) => FIELD_NAME_RE.test(sub.column))) {
+      continue;
+    }
+    if (existingColumns && !subColumns.every((sub) => existingColumns.has(sub.column))) {
+      continue;
+    }
+    composites.push({
+      field: field.name,
+      type: field.type,
+      isNullable: field.isNullable ?? true,
+      isRequiredPresent: def.isRequiredPresent,
+      defaultWhenEmpty: def.defaultWhenEmpty,
+      subColumns,
+    });
+    compositeColumns.push(...subColumns.map((sub) => sub.column));
+  }
+
+  const selectColumns = Array.from(
+    new Set(['id', 'createdAt', 'updatedAt', ...scalarNames, ...compositeColumns]),
+  );
+  return { selectColumns, composites };
+};
+
+const applyNullEquivalent = (kind: CompositeNullEquivalent): unknown => {
+  switch (kind) {
+    case 'string':
+      return '';
+    case 'array':
+      return [];
+    case 'object':
+      return {};
+    case 'raw':
+    default:
+      return null;
+  }
+};
+
+const coerceCompositeValue = (raw: unknown, coerce: CompositeCoerce): unknown => {
+  if (coerce === 'none') {
+    return raw;
+  }
+  if (typeof raw === 'number') {
+    return raw;
+  }
+  if (typeof raw === 'bigint') {
+    return Number(raw);
+  }
+  if (typeof raw === 'string' && raw.length > 0) {
+    return coerce === 'int' ? parseInt(raw, 10) : parseFloat(raw);
+  }
+  return raw;
+};
+
+// Collapse each composite's flat sub-columns (deleted from the row) into one nested object under the
+// field name. Mirrors twenty's TwentyORM formatResult: apply per-prop null-equivalents, and for ACTOR
+// (isRequiredPresent) return null/default when every required sub-prop is empty.
+export const reNestRecord = (
+  row: Record<string, unknown>,
+  composites: CompositeReadPlan[],
+): Record<string, unknown> => {
+  for (const plan of composites) {
+    const nested: Record<string, unknown> = {};
+    for (const sub of plan.subColumns) {
+      const raw = row[sub.column];
+      nested[sub.prop] =
+        raw === null || raw === undefined
+          ? applyNullEquivalent(sub.nullEquivalent)
+          : coerceCompositeValue(raw, sub.coerce);
+      delete row[sub.column];
+    }
+    if (plan.isRequiredPresent) {
+      const requiredProps = plan.subColumns.filter((sub) => sub.isRequired);
+      const allRequiredEmpty =
+        requiredProps.length > 0 &&
+        requiredProps.every((sub) => {
+          const value = nested[sub.prop];
+          return value === null || value === undefined || value === '';
+        });
+      if (allRequiredEmpty) {
+        row[plan.field] = plan.isNullable ? null : plan.defaultWhenEmpty;
+        continue;
+      }
+    }
+    row[plan.field] = nested;
+  }
+  return row;
 };

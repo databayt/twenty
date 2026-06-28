@@ -5,8 +5,10 @@ import { proxyToLegacy } from '../../../lib/proxy';
 import {
   capitalize,
   destroyRecord,
+  getObjectReadShape,
   getObjectScalarColumns,
   getRecord,
+  getTableColumnSet,
   getWritableScalarFields,
   ObjectNotFoundError,
   resolveObject,
@@ -64,8 +66,16 @@ export const GET = async (
     return denied;
   }
 
-  const columns = await getObjectScalarColumns(ctx.workspaceId, resolved.id);
-  const row = await getRecord(ctx.databaseSchema, resolved.tableName, columns, id);
+  // Slice 11: expand composite fields, drift-guarded against the table's real columns.
+  const existingColumns = await getTableColumnSet(ctx.databaseSchema, resolved.tableName);
+  const shape = await getObjectReadShape(ctx.workspaceId, resolved.id, existingColumns);
+  const row = await getRecord(
+    ctx.databaseSchema,
+    resolved.tableName,
+    shape.selectColumns,
+    id,
+    shape.composites,
+  );
   if (!row) {
     return NextResponse.json({ error: 'Record not found' }, { status: 404 });
   }

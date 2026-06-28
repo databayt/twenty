@@ -5,7 +5,9 @@ import { proxyToLegacy } from '../../lib/proxy';
 import {
   capitalize,
   createRecord,
+  getObjectReadShape,
   getObjectScalarColumns,
+  getTableColumnSet,
   getWritableScalarFields,
   listRecords,
   ObjectNotFoundError,
@@ -57,8 +59,17 @@ export const GET = async (
     return denied;
   }
 
-  const columns = await getObjectScalarColumns(ctx.workspaceId, resolved.id);
-  const rows = await listRecords(ctx.databaseSchema, resolved.tableName, columns);
+  // Slice 11: expand composite fields. Drift-guard against the table's real columns so a composite
+  // present in metadata but not materialized here is silently skipped (never a bad SELECT).
+  const existingColumns = await getTableColumnSet(ctx.databaseSchema, resolved.tableName);
+  const shape = await getObjectReadShape(ctx.workspaceId, resolved.id, existingColumns);
+  const rows = await listRecords(
+    ctx.databaseSchema,
+    resolved.tableName,
+    shape.selectColumns,
+    50,
+    shape.composites,
+  );
 
   // Upstream list envelope, keyed dynamically by the object's plural name.
   return NextResponse.json({
