@@ -5,6 +5,10 @@ import {
   createScalarField,
   MetadataError,
 } from '../../../lib/metadata/create-field-runner';
+import {
+  assertSettingsPermission,
+  PermissionError,
+} from '../../../lib/permissions';
 
 // Slice 3 (per-workspace migration runner — first faithful increment): create one TEXT custom field
 // on an existing object. Authenticated + tenant-scoped via the Slice 2 spine; tenant comes ONLY from
@@ -51,6 +55,16 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
     const authError =
       error instanceof AuthError ? error : new AuthError('Unauthorized');
     return NextResponse.json({ error: authError.message }, { status: authError.status });
+  }
+
+  // Creating a field is a data-model change -> gated by the settings flag (not the object write flag).
+  try {
+    await assertSettingsPermission(ctx, 'canUpdateAllSettings');
+  } catch (error) {
+    if (error instanceof PermissionError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
 
   let body: CreateFieldBody;

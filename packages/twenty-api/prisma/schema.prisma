@@ -69,12 +69,57 @@ model UserWorkspace {
 // An object definition; its physical table lives in the workspace schema, named from nameSingular
 // (custom objects get a leading underscore — see computeObjectTargetTable).
 model ObjectMetadata {
-  id            String  @id @db.Uuid
-  nameSingular  String
-  isCustom      Boolean @default(false)
-  workspaceId   String  @db.Uuid
+  id           String  @id @db.Uuid
+  nameSingular String
+  isCustom     Boolean @default(false)
+  isSystem     Boolean @default(false)
+  workspaceId  String  @db.Uuid
 
   @@map("objectMetadata")
+  @@schema("core")
+}
+
+// --- Slice 6: object-level permissions. role / roleTarget / objectPermission all live in `core`. ---
+
+// A role's DEFAULT object-record + settings flags (partial model — only what the check reads).
+model Role {
+  id                            String  @id @db.Uuid
+  canReadAllObjectRecords       Boolean @default(false)
+  canUpdateAllObjectRecords     Boolean @default(false)
+  canSoftDeleteAllObjectRecords Boolean @default(false)
+  canDestroyAllObjectRecords    Boolean @default(false)
+  canUpdateAllSettings          Boolean @default(false)
+  workspaceId                   String  @db.Uuid
+
+  @@map("role")
+  @@schema("core")
+}
+
+// Links one role to exactly one principal (userWorkspace | apiKey | agent).
+model RoleTarget {
+  id              String  @id @db.Uuid
+  roleId          String  @db.Uuid
+  userWorkspaceId String? @db.Uuid
+  apiKeyId        String? @db.Uuid
+  agentId         String? @db.Uuid
+  workspaceId     String  @db.Uuid
+
+  @@map("roleTarget")
+  @@schema("core")
+}
+
+// Per-(role, object) override. Booleans are NULLABLE — null means "inherit the role default".
+model ObjectPermission {
+  id                         String   @id @db.Uuid
+  roleId                     String   @db.Uuid
+  objectMetadataId           String   @db.Uuid
+  canReadObjectRecords       Boolean?
+  canUpdateObjectRecords     Boolean?
+  canSoftDeleteObjectRecords Boolean?
+  canDestroyObjectRecords    Boolean?
+  workspaceId                String   @db.Uuid
+
+  @@map("objectPermission")
   @@schema("core")
 }
 

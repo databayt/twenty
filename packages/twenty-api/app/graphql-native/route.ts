@@ -3,6 +3,7 @@ import { createSchema, createYoga, type YogaInitialContext } from 'graphql-yoga'
 import { type NextRequest } from 'next/server';
 
 import { authenticateRequest, AuthError, type AuthContext } from '../lib/auth';
+import { assertObjectPermission, PermissionError } from '../lib/permissions';
 import {
   listWorkspaceCompanies,
   type WorkspaceCompany,
@@ -74,6 +75,21 @@ const schema = createSchema<GraphQLContext>({
         };
         totalCount: number;
       }> => {
+        try {
+          await assertObjectPermission(
+            context.auth,
+            { nameSingular: 'company' },
+            'read',
+          );
+        } catch (error) {
+          if (error instanceof PermissionError) {
+            throw new GraphQLError(error.message, {
+              extensions: { code: 'FORBIDDEN', http: { status: error.status } },
+            });
+          }
+          throw error;
+        }
+
         const rows = await listWorkspaceCompanies(
           context.auth.databaseSchema,
           args.first ?? 50,

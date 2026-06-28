@@ -3,6 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateRequest, AuthError, type AuthContext } from '../../lib/auth';
 import { inngest } from '../../lib/inngest/client';
 import {
+  assertObjectPermission,
+  PermissionError,
+  type ObjectOperation,
+} from '../../lib/permissions';
+import {
   createWorkspaceCompany,
   listWorkspaceCompanies,
 } from '../../lib/workspace';
@@ -26,10 +31,31 @@ const authOrResponse = async (
   }
 };
 
+// Enforce the authed role's Company permission for the operation; returns a 403 response on deny.
+const permitOrResponse = async (
+  ctx: AuthContext,
+  operation: ObjectOperation,
+): Promise<NextResponse | null> => {
+  try {
+    await assertObjectPermission(ctx, { nameSingular: 'company' }, operation);
+    return null;
+  } catch (error) {
+    if (error instanceof PermissionError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
+};
+
 export const GET = async (request: NextRequest): Promise<NextResponse> => {
   const ctx = await authOrResponse(request);
   if (ctx instanceof NextResponse) {
     return ctx;
+  }
+
+  const denied = await permitOrResponse(ctx, 'read');
+  if (denied) {
+    return denied;
   }
 
   const companies = await listWorkspaceCompanies(ctx.databaseSchema);
@@ -46,6 +72,12 @@ export const POST = async (request: NextRequest): Promise<NextResponse> => {
   const ctx = await authOrResponse(request);
   if (ctx instanceof NextResponse) {
     return ctx;
+  }
+
+  // create maps to the object's update flag (upstream has no separate create flag).
+  const denied = await permitOrResponse(ctx, 'create');
+  if (denied) {
+    return denied;
   }
 
   let body: { name?: string | null };
