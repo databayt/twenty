@@ -71,8 +71,10 @@ model UserWorkspace {
 model ObjectMetadata {
   id           String  @id @db.Uuid
   nameSingular String
+  namePlural   String
   isCustom     Boolean @default(false)
   isSystem     Boolean @default(false)
+  isActive     Boolean @default(true)
   workspaceId  String  @db.Uuid
 
   @@map("objectMetadata")
@@ -135,6 +137,7 @@ model FieldMetadata {
   label               String
   isCustom            Boolean  @default(false)
   isActive            Boolean  @default(false)
+  isSystem            Boolean  @default(false)
   isNullable          Boolean? @default(true)
   defaultValue        Json?
   workspaceId         String   @db.Uuid
