@@ -25,17 +25,17 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 | Module | Status | Notes |
 | --- | --- | --- |
 | `healthz` | ✅ | native handler |
-| Prisma schema: `core` tables | 🔁 | partial: `Workspace` model done (Slice 1); add models as ports need them |
+| Prisma schema: `core` tables | 🔁 | partial: `Workspace`, `SigningKey`, `ApiKey`, `UserWorkspace` (Slices 1–2); add models as ports need them |
 | Prisma schema: `metadata` tables | ⬜ | objectMetadata, fieldMetadata, … |
-| Auth / sessions | ⬜ | Slice 2 — token verify -> user/workspace (Upstash or iron-session JWT) |
+| Auth / token verification | ✅ | Slice 2: `app/lib/{jwt,signing-key,auth}.ts` — faithful dual-algo verify (ES256 via core.signingKey kid / HS256 APP_SECRET-derived legacy), membership check, API-key revoke/expiry recheck. **Gap:** role/object permissions NOT yet enforced (any valid workspace token can read+write) — before broad rollout |
 | `workspace-migration-runner` (per-workspace DDL) | ⬜ | **the crux** — Slice 3 |
-| Tenant spine (`search_path` per-workspace read) | ✅ | `app/lib/workspace.ts`: resolve schema + raw read w/ injection guard (Slice 1; subdomain-based — token auth = Slice 2) |
+| Tenant spine (`search_path` per-workspace read+write) | ✅ | `app/lib/workspace.ts`: resolve schema (by subdomain or id) + raw read/insert w/ injection guard (Slices 1–2) |
 
 ## Feature modules (fill in from the upstream-scout worklist)
 | Module | Status | Upstream range | Notes |
 | --- | --- | --- | --- |
 | GraphQL layer (Yoga in route) | ⬜ | | dedicated milestone; no partial schema split |
-| Standard objects CRUD (Company first) | 🔁 | | Slice 1: native READ proven at dev route `GET /native/companies` (live data). Next: auth (Slice 2), then promote to the real `/rest/*` path + writes |
+| Standard objects CRUD (Company first) | ✅ | | Slice 2: authenticated native `GET` + `POST /rest/companies` (live-verified: 3 companies read, create persisted, negatives 401). Remaining: GET single/:id, PATCH/DELETE, batch, filter/order/depth — still proxied to legacy via the catch-all |
 | Messaging import | ⬜ | | Inngest job |
 | Calendar import | ⬜ | | Inngest job |
 | Workflow engine | ⬜ | | Inngest |

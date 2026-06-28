@@ -26,3 +26,38 @@ model Workspace {
   @@map("workspace")
   @@schema("core")
 }
+
+// Instance-scoped EC P-256 signing keys (rotating). We only read the plaintext SPKI publicKey to
+// verify ES256 access/API-key tokens by their header `kid`; the privateKey column is encrypted and
+// not needed for verification.
+model SigningKey {
+  id        String    @id @db.Uuid
+  publicKey String
+  revokedAt DateTime? @db.Timestamptz(6)
+
+  @@map("signingKey")
+  @@schema("core")
+}
+
+// API keys are stateless JWTs; this table only holds metadata. We look a key up by its `jti` claim
+// to enforce revocation/expiry (the JWT itself can't be revoked).
+model ApiKey {
+  id          String    @id @db.Uuid
+  name        String
+  expiresAt   DateTime  @db.Timestamptz(6)
+  revokedAt   DateTime? @db.Timestamptz(6)
+  workspaceId String    @db.Uuid
+
+  @@map("apiKey")
+  @@schema("core")
+}
+
+// Membership join — used to verify an ACCESS token's userWorkspaceId belongs to its user + workspace.
+model UserWorkspace {
+  id          String @id @db.Uuid
+  userId      String @db.Uuid
+  workspaceId String @db.Uuid
+
+  @@map("userWorkspace")
+  @@schema("core")
+}
