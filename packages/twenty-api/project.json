@@ -7,7 +7,7 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "options": { "command": "next build", "cwd": "packages/twenty-api" },
+      "options": { "command": "prisma generate && next build", "cwd": "packages/twenty-api" },
       "outputs": ["{projectRoot}/.next"],
       "cache": true
     },
@@ -21,7 +21,7 @@
     },
     "typecheck": {
       "executor": "nx:run-commands",
-      "options": { "command": "tsc --noEmit", "cwd": "packages/twenty-api" },
+      "options": { "command": "prisma generate && tsc --noEmit", "cwd": "packages/twenty-api" },
       "cache": true
     }
   }

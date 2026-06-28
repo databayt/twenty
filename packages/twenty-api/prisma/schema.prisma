@@ -1,0 +1,28 @@
+// Prisma data layer for twenty-api. Prisma owns the STATIC surface (the `core` + `metadata` Postgres
+// schemas Twenty creates). Per-workspace OBJECT data lives in a schema-per-workspace and is read with
+// raw SQL + the workspace's schema name (see app/lib/workspace.ts) — Prisma has no runtime dynamic
+// schema generation, which mirrors Twenty's own split (TypeORM core + a bespoke runner). The models
+// here are PARTIAL on purpose: only the columns twenty-api needs are declared; the table's many other
+// columns are ignored on read. See .claude/docs/VERCEL-BACKEND.md.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["core"]
+}
+
+// Partial model of core.workspace — enough to resolve a tenant to its dedicated Postgres schema.
+model Workspace {
+  id             String  @id @db.Uuid
+  displayName    String?
+  subdomain      String
+  databaseSchema String?
+
+  @@map("workspace")
+  @@schema("core")
+}

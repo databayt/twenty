@@ -1,3 +1,6 @@
 .next/
 .vercel
 *.tsbuildinfo
+.env
+# Prisma client is generated at build time (prisma generate)
+app/generated/

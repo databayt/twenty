@@ -2,7 +2,7 @@
 // legacy twenty-server by the catch-all handler. As backend modules are ported (see
 // .claude/docs/MIGRATION-LEDGER.md and the /backend-port skill), add their path prefixes here and
 // give them their own route file — they then stop being proxied.
-export const NATIVE_ROUTE_PREFIXES: readonly string[] = ['/healthz'];
+export const NATIVE_ROUTE_PREFIXES: readonly string[] = ['/healthz', '/native'];
 
 export const isNativeRoute = (pathname: string): boolean =>
   NATIVE_ROUTE_PREFIXES.some(

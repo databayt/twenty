@@ -17,25 +17,25 @@ Architecture + replacement map: `.claude/docs/VERCEL-BACKEND.md`. Sync workflow:
 | `app/healthz/route.ts` (native) | ✅ | first native handler |
 | `app/graphql/route.ts` (proxy → legacy) | 🔁 | proxied; keep whole until the GraphQL milestone |
 | `app/[...slug]/route.ts` catch-all (proxy → legacy) | 🔁 | covers /metadata, /rest/*, /files, /auth/*, … verbatim |
-| `nx build twenty-api` green | ⬜ | building/validating now |
-| Vercel project (root dir = packages/twenty-api) | ⬜ | set LEGACY_SERVER_URL; point frontend at it |
-| Neon connectivity from `twenty-api` | ⬜ | Slice 1+ (Prisma); DB already linked |
+| `nx build twenty-api` green | ✅ | builds + typechecks (Next 16.2.9, Prisma 6.19.3) |
+| Vercel project (root dir = packages/twenty-api) | ⬜ | set LEGACY_SERVER_URL + DATABASE_URL; point frontend at it |
+| DB connectivity from `twenty-api` (Prisma) | ✅ | Slice 1 verified against the live dev DB (Neon ready) |
 
 ## Core surface
 | Module | Status | Notes |
 | --- | --- | --- |
-| `healthz` | ⬜ | Slice 1, first native handler |
-| Prisma schema: `core` tables | ⬜ | users, workspaces, … |
+| `healthz` | ✅ | native handler |
+| Prisma schema: `core` tables | 🔁 | partial: `Workspace` model done (Slice 1); add models as ports need them |
 | Prisma schema: `metadata` tables | ⬜ | objectMetadata, fieldMetadata, … |
-| Auth / sessions | ⬜ | Upstash or iron-session JWT |
+| Auth / sessions | ⬜ | Slice 2 — token verify -> user/workspace (Upstash or iron-session JWT) |
 | `workspace-migration-runner` (per-workspace DDL) | ⬜ | **the crux** — Slice 3 |
-| Tenant guard (`search_path` + workspace scope) | ⬜ | reused by every route |
+| Tenant spine (`search_path` per-workspace read) | ✅ | `app/lib/workspace.ts`: resolve schema + raw read w/ injection guard (Slice 1; subdomain-based — token auth = Slice 2) |
 
 ## Feature modules (fill in from the upstream-scout worklist)
 | Module | Status | Upstream range | Notes |
 | --- | --- | --- | --- |
 | GraphQL layer (Yoga in route) | ⬜ | | dedicated milestone; no partial schema split |
-| Standard objects CRUD (Company first) | ⬜ | | Slice 1–2 |
+| Standard objects CRUD (Company first) | 🔁 | | Slice 1: native READ proven at dev route `GET /native/companies` (live data). Next: auth (Slice 2), then promote to the real `/rest/*` path + writes |
 | Messaging import | ⬜ | | Inngest job |
 | Calendar import | ⬜ | | Inngest job |
 | Workflow engine | ⬜ | | Inngest |
