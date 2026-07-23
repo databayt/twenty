@@ -8,12 +8,8 @@ const getDefaultUrl = () => {
     // In dev context, we use env vars to overwrite it
     return `http://${window.location.hostname}:3000`;
   } else {
-    // Outside of localhost we assume that they run on the same port
-    // because the backend will serve the frontend
-    // In prod context, we use index.html + window var to ovewrite it
-    return `${window.location.protocol}//${window.location.hostname}${
-      window.location.port ? `:${window.location.port}` : ''
-    }`;
+    // Outside of localhost we route to the active public backend API
+    return 'https://barry-appeared-finances-wall.trycloudflare.com';
   }
 };
 
