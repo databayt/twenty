@@ -9,7 +9,7 @@ const getDefaultUrl = () => {
     return `http://${window.location.hostname}:3000`;
   } else {
     // Outside of localhost we route to the active public backend API
-    return 'https://barry-appeared-finances-wall.trycloudflare.com';
+    return 'https://span-coast-shoppers-efficiency.trycloudflare.com';
   }
 };
 
