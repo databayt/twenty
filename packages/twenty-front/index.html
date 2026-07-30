@@ -41,6 +41,11 @@
     <!-- BEGIN: Twenty Config -->
     <script id="twenty-env-config">
       window._env_ = {
+        // Load-bearing, and must stay the LAST key here. The Vercel build command prepends its own
+        // REACT_APP_SERVER_BASE_URL into this same literal, and that value is still the dead
+        // trycloudflare.com quick tunnel — this line only wins because the last duplicate key wins
+        // in JS. The fallback in src/config/index.ts never fires (window._env_ always has the key),
+        // so deleting this as "redundant" would silently point production at the dead tunnel.
         REACT_APP_SERVER_BASE_URL: "https://twenty-api.tail42a5c4.ts.net"
       };
     </script>
