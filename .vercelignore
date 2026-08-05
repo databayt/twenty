@@ -1,0 +1,5 @@
+node_modules
+.git
+.pnpm-store
+packages/*/node_modules
+packages/*/dist
