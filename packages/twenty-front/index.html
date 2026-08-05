@@ -41,13 +41,89 @@
     <!-- BEGIN: Twenty Config -->
     <script id="twenty-env-config">
       window._env_ = {
-        // Load-bearing, and must stay the LAST key here. The Vercel build command prepends its own
-        // REACT_APP_SERVER_BASE_URL into this same literal, and that value is still the dead
-        // trycloudflare.com quick tunnel — this line only wins because the last duplicate key wins
-        // in JS. The fallback in src/config/index.ts never fires (window._env_ always has the key),
-        // so deleting this as "redundant" would silently point production at the dead tunnel.
+        // The Vercel build command sed-prepends its own REACT_APP_SERVER_BASE_URL into this same
+        // literal, and that value is still the dead trycloudflare.com quick tunnel, so the shipped
+        // file has the key twice. This copy used to win only because the last duplicate key wins
+        // in JS — a trap, since deleting it as "redundant" would have repointed prod at the dead
+        // tunnel. The failover block below now assigns the key explicitly after this literal, so
+        // it beats both copies and the ordering no longer matters.
         REACT_APP_SERVER_BASE_URL: "https://twenty-api.tail42a5c4.ts.net"
       };
+    </script>
+    <script id="twenty-backend-failover">
+      // The backend is self-hosted on two machines in two locations, because mains power at the
+      // primary site is unreliable. Exactly one is live at a time: a standby switches its
+      // Tailscale Funnel off, so it is not reachable from the internet at all and cannot be
+      // picked here by mistake.
+      //
+      // This exists so a power cut does not need a code change and a redeploy. Every earlier
+      // backend-URL outage was paid for that way, because the URL is baked in at build time.
+      (function () {
+        var CANDIDATES = [
+          'https://twenty-api.tail42a5c4.ts.net', // primary site
+          'https://twenty-api-2.tail42a5c4.ts.net' // standby site
+        ];
+        var PIN_KEY = 'twenty:backendBaseUrl';
+        var RELOAD_KEY = 'twenty:backendFailoverReloaded';
+        var PROBE_TIMEOUT_MS = 6000;
+
+        // Local dev keeps talking to its own server; src/config/index.ts handles that case.
+        if (/(^|\.)localhost$|^127\.0\.0\.1$/.test(window.location.hostname)) return;
+
+        var read = function (store, key) {
+          try { return window[store].getItem(key); } catch (e) { return null; }
+        };
+        var write = function (store, key, value) {
+          try { window[store].setItem(key, value); } catch (e) { /* private mode */ }
+        };
+
+        var pinned = read('localStorage', PIN_KEY);
+        if (CANDIDATES.indexOf(pinned) === -1) pinned = CANDIDATES[0];
+
+        // Assigned synchronously, before the app bundle loads, so config/index.ts reads the
+        // right value on its very first evaluation and no request goes to a dead host.
+        window._env_.REACT_APP_SERVER_BASE_URL = pinned;
+
+        if (typeof fetch !== 'function' || typeof AbortController !== 'function') return;
+
+        var probe = function (baseUrl) {
+          var controller = new AbortController();
+          var timer = setTimeout(function () { controller.abort(); }, PROBE_TIMEOUT_MS);
+          return fetch(baseUrl + '/healthz', {
+            method: 'GET',
+            cache: 'no-store',
+            signal: controller.signal
+          })
+            .then(function (response) {
+              clearTimeout(timer);
+              return response.ok ? baseUrl : null;
+            })
+            .catch(function () {
+              clearTimeout(timer);
+              return null;
+            });
+        };
+
+        // Check the pinned backend first. Only if it is actually down do we go looking, so the
+        // normal case costs one request and never reloads.
+        probe(pinned).then(function (healthy) {
+          if (healthy) return;
+
+          var others = CANDIDATES.filter(function (url) { return url !== pinned; });
+          return others
+            .reduce(function (chain, url) {
+              return chain.then(function (found) { return found || probe(url); });
+            }, Promise.resolve(null))
+            .then(function (found) {
+              if (!found) return; // everything is down, or we are offline — leave the pin alone
+              write('localStorage', PIN_KEY, found);
+              // At most one automatic reload per tab, so a flapping link can never loop.
+              if (read('sessionStorage', RELOAD_KEY)) return;
+              write('sessionStorage', RELOAD_KEY, '1');
+              window.location.reload();
+            });
+        });
+      })();
     </script>
     <!-- END: Twenty Config -->
 
