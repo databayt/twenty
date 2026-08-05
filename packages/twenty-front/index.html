@@ -50,6 +50,15 @@
         REACT_APP_SERVER_BASE_URL: "https://twenty-api.tail42a5c4.ts.net"
       };
     </script>
+    <!-- END: Twenty Config -->
+    <!--
+      Deliberately OUTSIDE the Twenty Config markers above. scripts/inject-runtime-env.sh (the
+      Docker/self-host build path) deletes everything BETWEEN those markers and writes back a
+      single-key config block — so a failover script placed inside them would be silently stripped
+      from any locally-built frontend, leaving a build that cannot reach the backup backend and
+      giving no sign that anything was removed. Out here it survives every build path, and it still
+      runs after window._env_ is defined, which is the only ordering that matters.
+    -->
     <script id="twenty-backend-failover">
       // The backend is self-hosted on two machines in two locations, because mains power at the
       // primary site is unreliable. Exactly one is live at a time: a standby switches its
@@ -125,7 +134,6 @@
         });
       })();
     </script>
-    <!-- END: Twenty Config -->
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script type="module">
