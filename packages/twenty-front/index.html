@@ -47,7 +47,7 @@
         // in JS — a trap, since deleting it as "redundant" would have repointed prod at the dead
         // tunnel. The failover block below now assigns the key explicitly after this literal, so
         // it beats both copies and the ordering no longer matters.
-        REACT_APP_SERVER_BASE_URL: "https://twenty-api.tail42a5c4.ts.net"
+        REACT_APP_SERVER_BASE_URL: "https://twenty-api-2.tail42a5c4.ts.net"
       };
     </script>
     <!-- END: Twenty Config -->
@@ -68,9 +68,15 @@
       // This exists so a power cut does not need a code change and a redeploy. Every earlier
       // backend-URL outage was paid for that way, because the URL is baked in at build time.
       (function () {
+        // ORDER MATTERS: the first entry is the default for any browser without a stored pin
+        // (new device, cleared storage, private window), because that is what `pinned` falls back
+        // to below. On 2026-08-14 the roles were swapped -- the Mac (twenty-api-2) became the live
+        // primary and the Linux box (twenty-api) was demoted and taken offline indefinitely. While
+        // this list still led with twenty-api, every fresh browser opened the app against a host
+        // that no longer answers and sat there loading.
         var CANDIDATES = [
-          'https://twenty-api.tail42a5c4.ts.net', // primary site
-          'https://twenty-api-2.tail42a5c4.ts.net' // standby site
+          'https://twenty-api-2.tail42a5c4.ts.net', // LIVE: the Mac
+          'https://twenty-api.tail42a5c4.ts.net' // offline since 2026-08-14; kept so failing back costs no redeploy
         ];
         var PIN_KEY = 'twenty:backendBaseUrl';
         var RELOAD_KEY = 'twenty:backendFailoverReloaded';
