@@ -69,7 +69,11 @@ export const USER_QUERY_FRAGMENT = gql`
         id
         name
         universalIdentifier
-        logo
+        # NOTE: 'logo' deliberately NOT selected. The self-hosted backend image
+        # (twentycrm/twenty:latest, APP_VERSION v2.31.1) has no 'logo' on the Application type,
+        # and one unknown field fails GraphQL VALIDATION -- so the whole GetCurrentUser query
+        # 400s and currentUser never loads. That took down login and the workspace switcher on
+        # 2026-08-14. Re-add only once the deployed backend actually exposes it.
       }
       isCustomDomainEnabled
       workspaceUrls {
