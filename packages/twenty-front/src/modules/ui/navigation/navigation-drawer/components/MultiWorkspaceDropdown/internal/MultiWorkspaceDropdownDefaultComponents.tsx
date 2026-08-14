@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { availableWorkspacesState } from '@/auth/states/availableWorkspacesState';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { countAvailableWorkspaces } from '@/auth/utils/availableWorkspacesUtils';
+import { getAvailableWorkspacePathAndSearchParams } from '@/auth/utils/availableWorkspacesUtils';
 import { supportChatState } from '@/client-config/states/supportChatState';
 import { isMultiWorkspaceEnabledState } from '@/client-config/states/isMultiWorkspaceEnabledState';
 import { useBuildWorkspaceUrl } from '@/domain-manager/hooks/useBuildWorkspaceUrl';
@@ -85,8 +86,18 @@ export const MultiWorkspaceDropdownDefaultComponents = () => {
   };
 
   const handleChange = async (availableWorkspace: AvailableWorkspace) => {
-    redirectToWorkspaceDomain(
+    // pathname + searchParams are NOT optional extras: they carry the loginToken that hands the
+    // session over to the target subdomain (-> /verify?loginToken=...). Redirecting to the bare
+    // workspace URL lands the user on /welcome and asks them to sign in again, because tokens
+    // live in per-origin localStorage and the new subdomain has none. AvailableWorkspaceItem
+    // already does this correctly; this handler did not.
+    const { pathname, searchParams } =
+      getAvailableWorkspacePathAndSearchParams(availableWorkspace);
+
+    await redirectToWorkspaceDomain(
       getWorkspaceUrl(availableWorkspace.workspaceUrls),
+      pathname,
+      searchParams,
     );
   };
 
