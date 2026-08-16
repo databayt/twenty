@@ -2,6 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npx nx build twenty-front && node packages/twenty-front/scripts/vercel-inject-env-config.mjs",
   "outputDirectory": "packages/twenty-front/build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<workspace>[^.]+)\\.crm\\.databayt\\.org"
+        }
+      ],
+      "destination": "https://:workspace.databayt.org/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {
