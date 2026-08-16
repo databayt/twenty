@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<workspace>[^.]+)\\.crm\\.databayt\\.org"
+        }
+      ],
+      "destination": "https://:workspace.databayt.org/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
