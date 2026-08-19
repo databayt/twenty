@@ -1,0 +1,40 @@
+# Adds env vars the stock compose doesn't pass through:
+#  - FRONTEND_URL: needed for SSO redirects + email links
+#  - IS_MULTIWORKSPACE_ENABLED / DEFAULT_SUBDOMAIN: per-product workspaces at <subdomain>.databayt.org
+#  - OUTBOUND_HTTP_SAFE_MODE_ENABLED: see the note on the server service below
+services:
+  server:
+    # !override REPLACES the base compose's ports list. Without the tag, compose MERGES lists and
+    # would publish 3000 as well as 3100 -- which is exactly the clash this exists to remove, and
+    # the container would fail to start whenever a dev server already held 3000.
+    ports: !override
+      - "${HOST_PORT:-3000}:3000"
+    environment:
+      FRONTEND_URL: ${FRONTEND_URL}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
+      DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      # Deliberately OFF, 2026-08-19. Default is true, which blocks every outbound
+      # HTTP request to a private IP -- localhost, 172.17.0.1, and host.docker.internal
+      # alike (the guard validates the DNS-resolved address on the socket 'lookup'
+      # event, so no hostname sneaks past). That default exists to stop a hostile
+      # TENANT crafting a workflow that probes the host's internal network. There is
+      # no hostile tenant here: one workspace, ours, on one laptop.
+      #
+      # Turning it off is what lets a Twenty Workflow POST to Hermes on the Docker
+      # host. The alternative was exposing Hermes through a public tunnel, which
+      # trades a theoretical local risk for a real remote one -- a personal machine
+      # holding brand credentials on public HTTPS, which HERMES-BRIEF.md warns
+      # against by name.
+      #
+      # It must be set on BOTH services: workflow steps execute in the WORKER, so
+      # setting it only on server would look correct and still block every send.
+      #
+      # Scope, stated plainly: this also unprotects webhooks and IMAP/SMTP/CalDAV.
+      # Revisit if this instance ever hosts a workspace that is not ours.
+      OUTBOUND_HTTP_SAFE_MODE_ENABLED: "false"
+  worker:
+    environment:
+      FRONTEND_URL: ${FRONTEND_URL}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
+      DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      OUTBOUND_HTTP_SAFE_MODE_ENABLED: "false"
