@@ -1,0 +1,16 @@
+# Twenty backend on Cloudflare Containers. Built ON the official image so this runs exactly
+# the code that ran under compose (v2.31.1) — nothing is compiled here.
+FROM twentycrm/twenty:v2.31.1
+USER root
+# Alpine base. redis is the only addition; postgres now lives on Neon.
+RUN apk add --no-cache redis curl
+COPY cf/api-start.sh /app/cf-api-start.sh
+RUN chmod +x /app/cf-api-start.sh
+# Per-deploy stamp as the last layer: a byte-identical image would not restart the container,
+# so secrets pushed since the previous deploy would never reach it.
+COPY .cf-deploy-stamp /app/cf-deploy-stamp
+USER 1000
+WORKDIR /app/packages/twenty-server
+ENV NODE_PORT=3000
+EXPOSE 3000
+ENTRYPOINT ["/app/cf-api-start.sh"]

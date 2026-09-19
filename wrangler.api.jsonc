@@ -1,0 +1,41 @@
+{
+  // Twenty CRM backend. Deploy with: wrangler deploy -c wrangler.api.jsonc
+  // (wrangler.jsonc in this repo is the SPA/static-assets Worker — two Workers, one repo.)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "twenty-api",
+  "main": "cf/api-worker.js",
+  "compatibility_date": "2026-06-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "containers": [
+    {
+      "class_name": "TwentyContainer",
+      "image": "./Dockerfile.cf-api",
+      "max_instances": 1,
+      // standard-1 (½ vCPU / 4 GiB). Measured under compose: server 585 MiB + worker 857 MiB
+      // + redis 46 MiB ~= 1.5 GiB, so `basic` (1 GiB) cannot hold it.
+      "instance_type": "standard-1"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "TWENTY", "class_name": "TwentyContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TwentyContainer"] }],
+  "vars": {
+    // Twenty builds absolute URLs from SERVER_URL — it must be the public API origin.
+    "SERVER_URL": "https://crm-api.databayt.org",
+    // The BASE domain, not a workspace host: Twenty derives each workspace from the
+    // subdomain of this (hogwarts.databayt.org -> workspace "hogwarts"). Setting it to
+    // app.databayt.org made every login fail with WORKSPACE_NOT_FOUND.
+    "FRONTEND_URL": "https://databayt.org",
+    "IS_MULTIWORKSPACE_ENABLED": "true",
+    "DEFAULT_SUBDOMAIN": "app",
+    "NODE_PORT": "3000",
+    "REDIS_URL": "redis://127.0.0.1:6379",
+    "STORAGE_TYPE": "s3",
+    "STORAGE_S3_REGION": "auto",
+    "STORAGE_S3_NAME": "twenty-crm-storage"
+  },
+  "routes": [{ "pattern": "crm-api.databayt.org/*", "zone_name": "databayt.org" }]
+}

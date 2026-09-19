@@ -1,0 +1,42 @@
+{
+  // Twenty CRM frontend on Cloudflare Workers Static Assets — NOT a container. The SPA is a
+  // static Vite build; the Worker only proxies the API paths to the backend and falls back to
+  // index.html. Replaces the Vercel project described by vercel.json, which is dead since the
+  // free account was paused and databayt.org left Vercel.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "twenty-front",
+  "main": "cf/worker.js",
+  // 2026-06-24, not the 2026-09-01 the other repos use: this fork pins wrangler 4.102.0, whose
+  // workerd only supports dates up to here, and adding a newer wrangler to an nx monorepo is a
+  // bigger change than this buys. Nothing this Worker uses differs between the two dates.
+  "compatibility_date": "2026-06-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  // Worker-to-Worker binding instead of fetching https://crm-api.databayt.org. A Worker's
+  // fetch to a hostname in its OWN zone does not re-enter that hostname's Worker — it goes to
+  // the origin, which here is the proxied AAAA 100:: black hole, so every API call 522'd.
+  // The binding also preserves the original request (Host/Origin included), which is how
+  // Twenty resolves which workspace a request belongs to.
+  "services": [{ "binding": "API", "service": "twenty-api" }],
+  "assets": {
+    "directory": "./packages/twenty-front/build",
+    "binding": "ASSETS",
+    // Client-side routes are not files; serve index.html for them.
+    "not_found_handling": "single-page-application",
+    // MANDATORY. Without it the assets layer runs BEFORE the Worker, and in
+    // single-page-application mode it answers /graphql with index.html — every API call
+    // then returns HTML with a 200 and the SPA fails in a way that looks like a backend bug.
+    "run_worker_first": true
+  },
+  // One Worker, five workspace hosts. Explicit hosts, never *.databayt.org/* — that would
+  // hijack www, kun and cb.
+  "routes": [
+    { "pattern": "hogwarts.databayt.org/*", "zone_name": "databayt.org" },
+    { "pattern": "mkan.databayt.org/*", "zone_name": "databayt.org" },
+    { "pattern": "sijillee.databayt.org/*", "zone_name": "databayt.org" },
+    { "pattern": "moallimee.databayt.org/*", "zone_name": "databayt.org" },
+    { "pattern": "sales.databayt.org/*", "zone_name": "databayt.org" },
+    { "pattern": "app.databayt.org/*", "zone_name": "databayt.org" }
+  ]
+}
