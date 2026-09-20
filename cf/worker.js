@@ -1,48 +1,29 @@
-// Twenty CRM frontend (hogwarts/mkan/sijillee/moallimee/app.databayt.org) on Cloudflare.
+// Twenty CRM frontend (hogwarts/mkan/sijillee/moallimee/sales/app.databayt.org) on Cloudflare.
 //
-// This replaces the Vercel deployment described by vercel.json, and has to reproduce two
-// things it did: proxy the API paths to the backend so the SPA sees them as SAME-ORIGIN
-// (the build ships `window._env_ = {}`, so the frontend resolves its API from the page
-// origin), and fall back to index.html for client-side routes.
+// Static assets only. The backend runs in Docker on Abdout's Mac, published by Tailscale
+// Funnel, and the browser talks to it DIRECTLY: the build bakes
+// `window._env_.REACT_APP_SERVER_BASE_URL` to the Funnel URL, so API calls never pass
+// through this Worker.
 //
-// The backend is the Twenty server running in a Cloudflare Container (the `twenty-api`
-// Worker), with Postgres on Neon and attachments in R2 — so the CRM no longer depends on
-// Abdout's MacBook being awake. It used to proxy to a Tailscale Funnel on that Mac; that
-// could never work from here anyway, because Cloudflare cannot complete a TLS handshake
-// with Funnel (proven: the same Worker reaches every other host fine and only the Funnel
-// returned 525).
-
-// Every prefix vercel.json rewrote to the backend. Matched as a path prefix, so `/rest` and
-// `/rest/anything` both go; `/restaurants` would not.
-const API_PREFIXES = [
-  "/graphql",
-  "/metadata",
-  "/client-config",
-  "/healthz",
-  "/auth",
-  "/oauth",
-  "/rest",
-  "/mcp",
-  "/apps",
-  "/app/billing",
-  "/emailing",
-  "/files",
-  "/open-api",
-  "/.well-known",
-]
-
-const isApiPath = (pathname) =>
-  API_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))
+// That is not a style choice. **Cloudflare cannot complete a TLS handshake with a Tailscale
+// Funnel** — measured: this same Worker fetched example.com and www.databayt.org with 200
+// while every request to the Funnel came back 525. So a Worker CANNOT proxy to the Mac, and
+// same-origin API paths are impossible while the backend lives there. Cross-origin is fine:
+// the Funnel answers `Access-Control-Allow-Origin: *` and Twenty authenticates with bearer
+// tokens rather than cookies.
+//
+// If the backend ever moves to a Cloudflare Container again, put the API-path proxy back and
+// reach it over a SERVICE BINDING, not a fetch to its hostname — a Worker's fetch to a
+// hostname in its own zone does not re-enter that hostname's Worker, it hits the origin,
+// which is a proxied AAAA 100:: black hole, and every call 522s.
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
 
-    // Legacy hosts: <ws>.crm.databayt.org → <ws>.databayt.org, as vercel.json redirected.
-    // NOTE: no DNS record backs this today. Universal SSL covers databayt.org and
-    // *.databayt.org — one label — so *.crm.databayt.org would need Advanced Certificate
-    // Manager. Adding the record without it turns a dead host into a TLS error. The branch
-    // stays so the behaviour is ready the moment that cert exists.
+    // Legacy hosts: <ws>.crm.databayt.org -> <ws>.databayt.org. No DNS backs this today —
+    // Universal SSL covers databayt.org and *.databayt.org, one label, so *.crm.databayt.org
+    // would need Advanced Certificate Manager. Kept so the behaviour is ready if that changes.
     const crm = url.hostname.match(/^([^.]+)\.crm\.databayt\.org$/)
     if (crm) {
       return Response.redirect(
@@ -51,15 +32,7 @@ export default {
       )
     }
 
-    if (isApiPath(url.pathname)) {
-      // Straight to the twenty-api Worker over the service binding, passing the request
-      // untouched — method, body stream and headers, Origin included, which is how Twenty
-      // resolves which workspace a request belongs to.
-      return env.API.fetch(request)
-    }
-
-    // Static assets. `not_found_handling: single-page-application` in wrangler.jsonc serves
-    // index.html for unknown paths, which is the client-side routing fallback.
+    // `not_found_handling: single-page-application` serves index.html for client-side routes.
     return env.ASSETS.fetch(request)
   },
 }

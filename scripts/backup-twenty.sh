@@ -1,23 +1,18 @@
 #!/bin/bash
-# Nightly backup of the Twenty CRM.
+# Nightly backup of the self-hosted Twenty CRM.
 #
-# The CRM moved off this Mac on 2026-09-19: the server runs in a Cloudflare
-# Container, Postgres is on Neon and attachments are in Cloudflare R2. This script
-# no longer touches Docker at all — it used to dump `twenty-db-1` and tar the
-# `twenty_server-local-data` volume, and both of those are gone.
+# Twenty's backend runs in Docker on this Mac. Two things must be captured, and
+# pg_dump alone captures only one of them:
 #
-# Two things must still be captured, and pg_dump alone captures only one:
+#   1. Postgres  (twenty-db-1, database `default`)  — records, metadata, workflows
+#   2. The `twenty_server-local-data` volume        — attachments. STORAGE_TYPE=local,
+#      so uploads live on disk, NOT in Postgres. A pg_dump-only backup silently
+#      loses every file anyone ever attached to a record.
 #
-#   1. Postgres  (Neon project `twenty`, database `neondb`) — records, metadata,
-#      workflows. Dumped over the DIRECT (non-pooled) endpoint: pgbouncer breaks
-#      the session-level things pg_dump relies on.
-#   2. The R2 bucket `twenty-crm-storage` — attachments. STORAGE_TYPE=s3, so
-#      uploads live in object storage, NOT in Postgres. A pg_dump-only backup
-#      silently loses every file anyone ever attached to a record.
-#
-# Neon keeps its own history, but that is a 6-hour retention window on the free
-# plan and it dies with the Neon project. This is the copy that survives the
-# account.
+# The CRM spent 2026-09-19 on Cloudflare (Neon + R2) and was moved back here the
+# next day, so this script briefly dumped Neon instead. If it ever moves off the
+# Mac again, the Neon/R2 variant is in commit 83bb510881 — and note that Neon runs
+# Postgres 17, which the v16 pg_dump on PATH refuses to dump from.
 #
 # Destination is Google Drive (private to the account) plus local retention.
 # NOT the hogwarts-databayt S3 bucket: its bucket policy grants s3:GetObject to
@@ -34,18 +29,10 @@
 
 set -u
 
-# Neon connection string lives in the Keychain, never on disk. DIRECT, not pooled.
-DB_KEYCHAIN_SERVICE="cf-twenty-PG_DIRECT"
-R2_BUCKET="twenty-crm-storage"
-R2_ENDPOINT="https://ce9a5376d149c808a0b97072421ba12f.r2.cloudflarestorage.com"
-R2_KEY_SERVICE="cf-twenty-R2_ACCESS_KEY_ID"
-R2_SECRET_SERVICE="cf-twenty-R2_SECRET_ACCESS_KEY"
-
-# Neon runs Postgres 17 and pg_dump REFUSES to dump from a server newer than
-# itself ("aborting because of server version mismatch"), so the v16 client on
-# PATH is not usable here. Pin the v17 binary and fail loudly if it is missing
-# rather than silently producing nothing.
-PG_DUMP="${PG_DUMP:-/opt/homebrew/opt/postgresql@17/bin/pg_dump}"
+DB_CONTAINER="twenty-db-1"
+DB_NAME="default"
+DB_USER="postgres"
+VOLUME="twenty_server-local-data"
 
 LOCAL_DIR="$HOME/backups/twenty"
 DRIVE_DIR="$HOME/Library/CloudStorage/GoogleDrive-osmanabdout.jr@gmail.com/My Drive/databayt-backups/twenty"
@@ -132,28 +119,16 @@ esac
 STAMP="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOCAL_DIR"
 
-if [ ! -x "$PG_DUMP" ]; then
-    log "FAIL: no Postgres 17 pg_dump at $PG_DUMP — install it (brew install postgresql@17)."
-    log "      The v16 client on PATH cannot dump Neon's v17 server."
-    exit 1
-fi
-
-# Credentials come from the login Keychain. Under launchd this works while the
-# user session is unlocked; if the Mac is locked at 03:30 `security` returns
-# empty and we must fail rather than write a 0-byte "backup".
-DB_URL="$(security find-generic-password -a "$USER" -s "$DB_KEYCHAIN_SERVICE" -w 2>/dev/null)"
-if [ -z "${DB_URL:-}" ]; then
-    log "FAIL: could not read $DB_KEYCHAIN_SERVICE from the Keychain (is the session locked?)"
+if ! docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
+    log "FAIL: container $DB_CONTAINER not found — is the stack up? (cd packages/twenty-docker && docker compose up -d)"
     exit 1
 fi
 
 # 1. Postgres. -Fc is the custom format: compressed, and pg_restore can pick
-#    individual tables out of it, which a plain SQL dump cannot. --no-owner and
-#    --no-privileges keep the dump restorable onto a role that is not Neon's
-#    neondb_owner.
+#    individual tables out of it, which a plain SQL dump cannot.
 DUMP="$LOCAL_DIR/twenty-$STAMP.dump"
-log "dumping Neon ($(echo "$DB_URL" | sed -E 's#.*@([^/?]+).*#\1#')) …"
-if ! "$PG_DUMP" -Fc --no-owner --no-privileges -d "$DB_URL" > "$DUMP" 2>>"$LOG_FILE"; then
+log "dumping $DB_NAME …"
+if ! docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$DUMP" 2>>"$LOG_FILE"; then
     log "FAIL: pg_dump errored"
     rm -f "$DUMP"
     exit 1
@@ -166,33 +141,15 @@ if [ ! -s "$DUMP" ] || [ "$(stat -f%z "$DUMP")" -lt 10000 ]; then
 fi
 log "  → $(basename "$DUMP") ($(du -h "$DUMP" | cut -f1))"
 
-# 2. Attachments, mirrored out of R2. Keys are preserved so the tarball can be
-#    synced straight back into a bucket — Twenty stores the key, not a URL.
+# 2. Attachments. The volume lives inside the Colima VM, not on the macOS
+#    filesystem, so it is read through a throwaway container rather than directly.
 FILES="$LOCAL_DIR/twenty-files-$STAMP.tar.gz"
-R2_KEY="$(security find-generic-password -a "$USER" -s "$R2_KEY_SERVICE" -w 2>/dev/null)"
-R2_SECRET="$(security find-generic-password -a "$USER" -s "$R2_SECRET_SERVICE" -w 2>/dev/null)"
-if [ -z "${R2_KEY:-}" ] || [ -z "${R2_SECRET:-}" ]; then
-    log "WARN: R2 credentials unavailable — Postgres dump succeeded, attachments NOT captured"
-elif ! command -v aws >/dev/null 2>&1; then
-    log "WARN: aws CLI not found — Postgres dump succeeded, attachments NOT captured"
+log "archiving volume $VOLUME …"
+if docker run --rm -v "$VOLUME":/data:ro alpine tar -czf - -C /data . > "$FILES" 2>>"$LOG_FILE"; then
+    log "  → $(basename "$FILES") ($(du -h "$FILES" | cut -f1))"
 else
-    STAGE="$(mktemp -d "${TMPDIR:-/tmp}/twenty-r2.XXXXXX")"
-    log "syncing r2://$R2_BUCKET …"
-    if AWS_ACCESS_KEY_ID="$R2_KEY" AWS_SECRET_ACCESS_KEY="$R2_SECRET" AWS_DEFAULT_REGION=auto \
-       aws s3 sync "s3://$R2_BUCKET" "$STAGE" --endpoint-url "$R2_ENDPOINT" --only-show-errors >>"$LOG_FILE" 2>&1; then
-        COUNT=$(find "$STAGE" -type f | wc -l | tr -d ' ')
-        if [ "$COUNT" -eq 0 ]; then
-            log "WARN: R2 sync returned 0 objects — not writing an empty archive"
-        elif tar -czf "$FILES" -C "$STAGE" . 2>>"$LOG_FILE"; then
-            log "  → $(basename "$FILES") ($(du -h "$FILES" | cut -f1), $COUNT objects)"
-        else
-            log "WARN: archiving the R2 mirror failed — Postgres dump still succeeded"
-            rm -f "$FILES"
-        fi
-    else
-        log "WARN: R2 sync failed — Postgres dump still succeeded"
-    fi
-    rm -rf "$STAGE"
+    log "WARN: volume archive failed — Postgres dump still succeeded"
+    rm -f "$FILES"
 fi
 
 # 3. Off-machine copy.
