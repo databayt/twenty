@@ -14,6 +14,12 @@
   "workers_dev": true,
   "observability": { "enabled": true },
   "assets": {
+    // This build MUST be extracted from the same twentycrm/twenty:<TAG> image the API runs
+    // (the TAG in packages/twenty-docker) — never built from this fork's twenty-front, whose
+    // base is older than the published image. Use scripts/deploy-front-from-image.sh.
+    // Skew does not look like a broken build: the password is accepted and tokens are issued,
+    // then GetCurrentUser 400s with `Cannot query field "..."` and the sign-in modal comes
+    // back, reading to the user as a wrong password. Cost us 2026-09-20 to 09-21.
     "directory": "./packages/twenty-front/build",
     "binding": "ASSETS",
     // Client-side routes are not files; serve index.html for them.

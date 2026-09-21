@@ -2,6 +2,7 @@
 #  - FRONTEND_URL: needed for SSO redirects + email links
 #  - IS_MULTIWORKSPACE_ENABLED / DEFAULT_SUBDOMAIN: per-product workspaces at <subdomain>.databayt.org
 #  - OUTBOUND_HTTP_SAFE_MODE_ENABLED: see the note on the server service below
+#  - AUTH_COOKIE_ALLOWED_ORIGINS: the SPA is cross-origin (Cloudflare), see the note below
 services:
   server:
     # !override REPLACES the base compose's ports list. Without the tag, compose MERGES lists and
@@ -13,6 +14,15 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
       DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      # The SPA is served from Cloudflare, cross-origin to this API (a Worker cannot
+      # TLS-handshake a Tailscale Funnel, so same-origin is impossible while the backend
+      # lives on the laptop -- see twenty/cf/worker.js). Since v2.31.x the front sends
+      # CREDENTIALED requests; the server answers those with Access-Control-Allow-Origin: *
+      # for any origin not listed here, and a browser rejects a credentialed wildcard.
+      # Only SERVER_URL and FRONTEND_URL are allow-listed automatically, and the six
+      # workspaces are none of those. Without this the /metadata preflight fails and the
+      # sign-in form never renders at all.
+      AUTH_COOKIE_ALLOWED_ORIGINS: ${AUTH_COOKIE_ALLOWED_ORIGINS}
       # Deliberately OFF, 2026-08-19. Default is true, which blocks every outbound
       # HTTP request to a private IP -- localhost, 172.17.0.1, and host.docker.internal
       # alike (the guard validates the DNS-resolved address on the socket 'lookup'
@@ -38,3 +48,9 @@ services:
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
       DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
       OUTBOUND_HTTP_SAFE_MODE_ENABLED: "false"
+  db:
+    ports:
+      - "5433:5432"
+  redis:
+    ports:
+      - "6380:6379"
