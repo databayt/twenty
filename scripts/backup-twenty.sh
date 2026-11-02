@@ -116,12 +116,19 @@ esac
 
 # ── Run ──────────────────────────────────────────────────────────
 
+# Exit codes (kun's job-run.sh maps them): 0 ok · 75 defer (Docker/Colima or the DB container is down —
+# the supervisor retries) · 1 fail (the dump itself failed). A missing attachment archive or off-machine
+# copy is a warning on the run's record, not a failure: re-dumping Postgres would not fix a Drive that
+# is not mounted.
 STAMP="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOCAL_DIR"
+. "$HOME/.claude/scripts/lib/runs.sh" 2>/dev/null || runs_record() { :; }
+warn() { log "WARN: $1"; runs_record twenty-backup warn "$1" 0 "$2"; }
 
-if ! docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
-    log "FAIL: container $DB_CONTAINER not found — is the stack up? (cd packages/twenty-docker && docker compose up -d)"
-    exit 1
+# Ask for State.Running, not mere existence: a stopped container passes `docker inspect` and then fails `docker exec`.
+if [ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null)" != "true" ]; then
+    log "DEFER: Docker/Colima is down or $DB_CONTAINER is not running — is the stack up? (cd packages/twenty-docker && docker compose up -d)"
+    exit 75
 fi
 
 # 1. Postgres. -Fc is the custom format: compressed, and pg_restore can pick
@@ -148,17 +155,19 @@ log "archiving volume $VOLUME …"
 if docker run --rm -v "$VOLUME":/data:ro alpine tar -czf - -C /data . > "$FILES" 2>>"$LOG_FILE"; then
     log "  → $(basename "$FILES") ($(du -h "$FILES" | cut -f1))"
 else
-    log "WARN: volume archive failed — Postgres dump still succeeded"
+    warn "volume archive failed — the Postgres dump succeeded, attachments are NOT backed up" files
     rm -f "$FILES"
 fi
 
 # 3. Off-machine copy.
 if mkdir -p "$DRIVE_DIR" 2>/dev/null; then
-    cp "$DUMP" "$DRIVE_DIR/" 2>>"$LOG_FILE" && log "drive: dump copied"
-    [ -f "$FILES" ] && cp "$FILES" "$DRIVE_DIR/" 2>>"$LOG_FILE" && log "drive: files copied"
+    if cp "$DUMP" "$DRIVE_DIR/" 2>>"$LOG_FILE"; then log "drive: dump copied"; else warn "the Drive copy of the dump failed — this backup is LOCAL ONLY" offsite; fi
+    if [ -f "$FILES" ]; then
+        if cp "$FILES" "$DRIVE_DIR/" 2>>"$LOG_FILE"; then log "drive: files copied"; else warn "the Drive copy of the files archive failed" offsite; fi
+    fi
     find "$DRIVE_DIR" -name 'twenty-*' -mtime +$RETAIN_DRIVE_DAYS -delete 2>/dev/null
 else
-    log "WARN: Drive not reachable — this backup is LOCAL ONLY"
+    warn "Drive not reachable — this backup is LOCAL ONLY" offsite
 fi
 
 find "$LOCAL_DIR" -name 'twenty-*' -mtime +$RETAIN_LOCAL_DAYS -delete 2>/dev/null
