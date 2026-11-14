@@ -34,6 +34,15 @@ DB_NAME="default"
 DB_USER="postgres"
 VOLUME="twenty_server-local-data"
 
+# Since 2026-11-14 the stack runs on Hetzner (twenty-1, crm-api.databayt.org — see ../hetzner/).
+# Every docker call goes over SSH and the dump/archive stream back here, so the Drive + local
+# retention below is unchanged. TWENTY_DOCKER_HOST=local runs against this Mac's Docker instead.
+TWENTY_DOCKER_HOST="${TWENTY_DOCKER_HOST:-root@2.31.202.201}"
+dk() {
+    if [ "$TWENTY_DOCKER_HOST" = "local" ]; then docker "$@"
+    else ssh -i "$HOME/.ssh/hetzner_twenty" -o BatchMode=yes -o ConnectTimeout=15 "$TWENTY_DOCKER_HOST" docker "$(printf '%q ' "$@")"; fi
+}
+
 LOCAL_DIR="$HOME/backups/twenty"
 DRIVE_DIR="$HOME/Library/CloudStorage/GoogleDrive-osmanabdout.jr@gmail.com/My Drive/databayt-backups/twenty"
 RETAIN_LOCAL_DAYS=14
@@ -126,8 +135,8 @@ mkdir -p "$LOCAL_DIR"
 warn() { log "WARN: $1"; runs_record twenty-backup warn "$1" 0 "$2"; }
 
 # Ask for State.Running, not mere existence: a stopped container passes `docker inspect` and then fails `docker exec`.
-if [ "$(docker inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null)" != "true" ]; then
-    log "DEFER: Docker/Colima is down or $DB_CONTAINER is not running — is the stack up? (cd packages/twenty-docker && docker compose up -d)"
+if [ "$(dk inspect -f '{{.State.Running}}' "$DB_CONTAINER" 2>/dev/null)" != "true" ]; then
+    log "DEFER: $TWENTY_DOCKER_HOST unreachable or $DB_CONTAINER is not running — is the stack up? (ssh in, cd /opt/twenty && docker compose up -d)"
     exit 75
 fi
 
@@ -135,7 +144,7 @@ fi
 #    individual tables out of it, which a plain SQL dump cannot.
 DUMP="$LOCAL_DIR/twenty-$STAMP.dump"
 log "dumping $DB_NAME …"
-if ! docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$DUMP" 2>>"$LOG_FILE"; then
+if ! dk exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$DUMP" 2>>"$LOG_FILE"; then
     log "FAIL: pg_dump errored"
     rm -f "$DUMP"
     exit 1
@@ -152,7 +161,7 @@ log "  → $(basename "$DUMP") ($(du -h "$DUMP" | cut -f1))"
 #    filesystem, so it is read through a throwaway container rather than directly.
 FILES="$LOCAL_DIR/twenty-files-$STAMP.tar.gz"
 log "archiving volume $VOLUME …"
-if docker run --rm -v "$VOLUME":/data:ro alpine tar -czf - -C /data . > "$FILES" 2>>"$LOG_FILE"; then
+if dk run --rm -v "$VOLUME":/data:ro alpine tar -czf - -C /data . > "$FILES" 2>>"$LOG_FILE"; then
     log "  → $(basename "$FILES") ($(du -h "$FILES" | cut -f1))"
 else
     warn "volume archive failed — the Postgres dump succeeded, attachments are NOT backed up" files

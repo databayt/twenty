@@ -1,0 +1,33 @@
+# Hetzner host override (replaces packages/twenty-docker/docker-compose.override.yml on the server).
+# Same env pass-through as the Mac override; differences:
+#  - every published port binds 127.0.0.1 — Caddy (crm-api.databayt.org) is the only public door,
+#    and the Mac reaches :3100 through its SSH tunnel (com.databayt.twenty-tunnel).
+#  - host.docker.internal -> host-gateway, so the ACTIVE Hogwarts workflow
+#    "School shortlisted → outreach" still reaches Hermes at host.docker.internal:8644,
+#    which the Mac's tunnel publishes on this host with -R 0.0.0.0:8644 (firewall keeps it private).
+services:
+  server:
+    ports: !override
+      - "127.0.0.1:3100:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      FRONTEND_URL: ${FRONTEND_URL}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
+      DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      AUTH_COOKIE_ALLOWED_ORIGINS: ${AUTH_COOKIE_ALLOWED_ORIGINS}
+      OUTBOUND_HTTP_SAFE_MODE_ENABLED: "false"
+  worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      FRONTEND_URL: ${FRONTEND_URL}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED}
+      DEFAULT_SUBDOMAIN: ${DEFAULT_SUBDOMAIN}
+      OUTBOUND_HTTP_SAFE_MODE_ENABLED: "false"
+  db:
+    ports:
+      - "127.0.0.1:5433:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6380:6379"

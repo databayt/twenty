@@ -15,7 +15,124 @@
       "permanent": false
     }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/graphql",
+      "destination": "https://crm-api.databayt.org/graphql"
+    },
+    {
+      "source": "/graphql/(.*)",
+      "destination": "https://crm-api.databayt.org/graphql/$1"
+    },
+    {
+      "source": "/metadata",
+      "destination": "https://crm-api.databayt.org/metadata"
+    },
+    {
+      "source": "/metadata/(.*)",
+      "destination": "https://crm-api.databayt.org/metadata/$1"
+    },
+    {
+      "source": "/client-config",
+      "destination": "https://crm-api.databayt.org/client-config"
+    },
+    {
+      "source": "/client-config/(.*)",
+      "destination": "https://crm-api.databayt.org/client-config/$1"
+    },
+    {
+      "source": "/healthz",
+      "destination": "https://crm-api.databayt.org/healthz"
+    },
+    {
+      "source": "/healthz/(.*)",
+      "destination": "https://crm-api.databayt.org/healthz/$1"
+    },
+    {
+      "source": "/auth",
+      "destination": "https://crm-api.databayt.org/auth"
+    },
+    {
+      "source": "/auth/(.*)",
+      "destination": "https://crm-api.databayt.org/auth/$1"
+    },
+    {
+      "source": "/oauth",
+      "destination": "https://crm-api.databayt.org/oauth"
+    },
+    {
+      "source": "/oauth/(.*)",
+      "destination": "https://crm-api.databayt.org/oauth/$1"
+    },
+    {
+      "source": "/rest",
+      "destination": "https://crm-api.databayt.org/rest"
+    },
+    {
+      "source": "/rest/(.*)",
+      "destination": "https://crm-api.databayt.org/rest/$1"
+    },
+    {
+      "source": "/mcp",
+      "destination": "https://crm-api.databayt.org/mcp"
+    },
+    {
+      "source": "/mcp/(.*)",
+      "destination": "https://crm-api.databayt.org/mcp/$1"
+    },
+    {
+      "source": "/apps",
+      "destination": "https://crm-api.databayt.org/apps"
+    },
+    {
+      "source": "/apps/(.*)",
+      "destination": "https://crm-api.databayt.org/apps/$1"
+    },
+    {
+      "source": "/app/billing",
+      "destination": "https://crm-api.databayt.org/app/billing"
+    },
+    {
+      "source": "/app/billing/(.*)",
+      "destination": "https://crm-api.databayt.org/app/billing/$1"
+    },
+    {
+      "source": "/emailing",
+      "destination": "https://crm-api.databayt.org/emailing"
+    },
+    {
+      "source": "/emailing/(.*)",
+      "destination": "https://crm-api.databayt.org/emailing/$1"
+    },
+    {
+      "source": "/files",
+      "destination": "https://crm-api.databayt.org/files"
+    },
+    {
+      "source": "/files/(.*)",
+      "destination": "https://crm-api.databayt.org/files/$1"
+    },
+    {
+      "source": "/open-api",
+      "destination": "https://crm-api.databayt.org/open-api"
+    },
+    {
+      "source": "/open-api/(.*)",
+      "destination": "https://crm-api.databayt.org/open-api/$1"
+    },
+    {
+      "source": "/.well-known",
+      "destination": "https://crm-api.databayt.org/.well-known"
+    },
+    {
+      "source": "/.well-known/(.*)",
+      "destination": "https://crm-api.databayt.org/.well-known/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -29,7 +146,10 @@
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     }
   ]

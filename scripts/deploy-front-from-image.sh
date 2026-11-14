@@ -25,7 +25,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-API_URL="${1:-https://twenty-api-2.tail42a5c4.ts.net}"
+# The API moved to Hetzner on 2026-11-14 (hetzner/). The container below must be a LOCAL copy of the
+# same image tag as the server (`docker run -d --name twenty-server-1 twentycrm/twenty:$TAG` is enough
+# to extract dist/front) — or, for a URL-only change, edit packages/twenty-front/build/index.html and
+# `npx wrangler deploy`, which is what the 11-14 cutover did.
+API_URL="${1:-https://crm-api.databayt.org}"
 CONTAINER="${CONTAINER:-twenty-server-1}"
 STAGE=$(mktemp -d -t twenty-front.XXXXXX)
 trap 'rm -rf "$STAGE"' EXIT

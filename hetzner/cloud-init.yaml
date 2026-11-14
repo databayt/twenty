@@ -1,0 +1,30 @@
+#cloud-config
+# Twenty CRM backend host (Hetzner). Docker runs the stack from /opt/twenty; Caddy terminates TLS
+# for crm-api.databayt.org and proxies to the server container on 127.0.0.1:3100.
+package_update: true
+packages: [docker.io, docker-compose-v2, caddy, postgresql-client]
+
+swap:
+  filename: /swapfile
+  size: 2G
+
+write_files:
+  # The Mac's tunnel publishes Hermes (:8644) here with -R 0.0.0.0:8644 so the Twenty worker can
+  # reach it at host.docker.internal:8644. The Hetzner firewall keeps 8644 closed to the internet.
+  - path: /etc/ssh/sshd_config.d/60-twenty-tunnel.conf
+    content: |
+      GatewayPorts clientspecified
+      ClientAliveInterval 30
+      ClientAliveCountMax 4
+  - path: /etc/caddy/Caddyfile
+    content: |
+      crm-api.databayt.org {
+          encode gzip
+          reverse_proxy 127.0.0.1:3100
+      }
+
+runcmd:
+  - systemctl restart ssh
+  - systemctl enable --now docker
+  - mkdir -p /opt/twenty
+  - systemctl restart caddy
